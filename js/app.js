@@ -3,7 +3,7 @@
 import * as store from './store.js';
 import { startRouter } from './router.js';
 import { isGardener, onSettingsChange } from './settings.js';
-import { el, icon, clear } from './ui.js';
+import { el, icon, clear, snackbar } from './ui.js';
 import { mountSyncStatus } from './components/sync-status.js';
 import * as today from './views/today.js';
 import * as care from './views/care.js';
@@ -165,13 +165,44 @@ onSettingsChange(() => renderTabBar());
 mountSyncStatus(document.getElementById('sync-status'));
 store.load();
 
-/* ---------------- service worker ---------------- */
+/* ---------------- service worker & update flow ---------------- */
 // Registered on real hosts only — localhost stays SW-free so development
-// never fights a cache. (sw.js lands in the PWA step.)
+// never fights a cache. New deploys install in the background; the user
+// activates them from a persistent "new version" snackbar (no torn,
+// mixed-version module graphs).
 if ('serviceWorker' in navigator && !/^(localhost|127\.|192\.168\.)/.test(location.hostname)) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('./sw.js');
+
+      const promptUpdate = (worker) => {
+        snackbar({
+          message: 'A new version of the garden is ready.',
+          actionLabel: 'Refresh',
+          duration: 0,
+          onAction: () => worker.postMessage({ type: 'SKIP_WAITING' }),
+        });
+      };
+
+      if (reg.waiting && navigator.serviceWorker.controller) promptUpdate(reg.waiting);
+      reg.addEventListener('updatefound', () => {
+        const worker = reg.installing;
+        worker?.addEventListener('statechange', () => {
+          if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+            promptUpdate(worker);
+          }
+        });
+      });
+
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!reloaded) {
+          reloaded = true;
+          window.location.reload();
+        }
+      });
+    } catch {
       /* PWA is progressive — the app works without it */
-    });
+    }
   });
 }
