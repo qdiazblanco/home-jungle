@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Full-bleed background; glyph kept inside the central 60% safe zone. -->
+  <rect width="512" height="512" fill="#3e6b4a"/>
+  <g transform="translate(256 133) scale(11)">
+    <path d="M0 20c0-6 1-10 4-13 2.4-2.4 5-3 6-3 0 1-.6 3.6-3 6-3 3-7 4-7 10z" fill="#f6f2e8"/>
+    <path d="M0 20c0-6-1-10-4-13C-6.4 4.6-9 4-10 4c0 1 .6 3.6 3 6 3 3 7 4 7 10z" fill="#cfe0cf"/>
+  </g>
+</svg>

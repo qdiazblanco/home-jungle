@@ -1,0 +1,178 @@
+[
+  {
+    "id": "9d893480-7336-4bc4-b53a-916a4f1d4c61",
+    "plantId": "living-room-monstera",
+    "type": "watering",
+    "date": "2026-06-09T09:15:00",
+    "author": "Kike",
+    "note": null
+  },
+  {
+    "id": "2e3a29c9-df0d-44c8-8cb3-efc9a27d9e45",
+    "plantId": "living-room-monstera",
+    "type": "watering",
+    "date": "2026-06-23T10:05:00",
+    "author": "Pepa",
+    "note": "Leaves a bit droopy, drank fast"
+  },
+  {
+    "id": "f13cc880-0798-4bac-9610-5d075e17a839",
+    "plantId": "living-room-monstera",
+    "type": "feeding",
+    "date": "2026-06-23T10:10:00",
+    "author": "Pepa",
+    "note": "Half-dose liquid feed with the watering"
+  },
+  {
+    "id": "2c1a57cb-47cb-46c4-b04d-6f6cdb43ca17",
+    "plantId": "living-room-monstera",
+    "type": "watering",
+    "date": "2026-07-07T09:30:00",
+    "author": "Kike",
+    "note": null
+  },
+  {
+    "id": "0df1520b-6767-4cb3-9a4d-9b39acc5b4b7",
+    "plantId": "living-room-monstera",
+    "type": "note",
+    "date": "2026-07-15T20:40:00",
+    "author": "Pepa",
+    "note": "New leaf unfurling — count the fenestrations!"
+  },
+  {
+    "id": "4aad0937-00be-483c-a376-d93a12a7e845",
+    "plantId": "kitchen-pothos",
+    "type": "pruning",
+    "date": "2026-06-20T11:00:00",
+    "author": "Kike",
+    "note": "Big trim; kept the best strand as a cutting"
+  },
+  {
+    "id": "87cf1fb9-3b90-41b0-af86-ea20c8abd6c0",
+    "plantId": "kitchen-pothos",
+    "type": "cutting",
+    "date": "2026-06-20T11:20:00",
+    "author": "Kike",
+    "note": "Three-node cutting into a water glass → bedroom pothos cutting"
+  },
+  {
+    "id": "1a3f5719-5623-4312-aad6-fc971151aa24",
+    "plantId": "kitchen-pothos",
+    "type": "watering",
+    "date": "2026-06-25T08:50:00",
+    "author": "Pepa",
+    "note": null
+  },
+  {
+    "id": "f7833c04-81d9-4424-b996-573478ff4678",
+    "plantId": "kitchen-pothos",
+    "type": "watering",
+    "date": "2026-07-02T09:00:00",
+    "author": "Kike",
+    "note": null
+  },
+  {
+    "id": "03893b6f-3d61-44f8-9b82-358535f27b01",
+    "plantId": "kitchen-pothos",
+    "type": "feeding",
+    "date": "2026-07-02T09:05:00",
+    "author": "Kike",
+    "note": "Monthly feed"
+  },
+  {
+    "id": "1d8e8732-5a24-4685-b5b6-bb41c04d48e4",
+    "plantId": "kitchen-pothos",
+    "type": "watering",
+    "date": "2026-07-09T08:45:00",
+    "author": "Pepa",
+    "note": null
+  },
+  {
+    "id": "598123de-8ff1-44ac-b532-53b13a08025c",
+    "plantId": "kitchen-pothos",
+    "type": "watering",
+    "date": "2026-07-16T09:10:00",
+    "author": "Pepa",
+    "note": null
+  },
+  {
+    "id": "70bd8311-80ae-4f97-a76b-61f4f1d8fb40",
+    "plantId": "bedroom-pothos-cutting",
+    "type": "repotting",
+    "date": "2026-07-20T18:30:00",
+    "author": "Kike",
+    "note": "From the water glass into a 10 cm pot"
+  },
+  {
+    "id": "67bb6679-4ea5-4712-b903-6df2f866c40f",
+    "plantId": "bathroom-calathea",
+    "type": "treatment",
+    "date": "2026-07-02T19:00:00",
+    "author": "Pepa",
+    "note": "Neem oil — spider mites on two leaves"
+  },
+  {
+    "id": "0b031189-ae59-4115-9089-2c27465b5807",
+    "plantId": "bathroom-calathea",
+    "type": "treatment",
+    "date": "2026-07-09T19:00:00",
+    "author": "Pepa",
+    "note": "Second neem round, mites gone"
+  },
+  {
+    "id": "1d3ce366-d360-4e7c-9459-85a33296142e",
+    "plantId": "bathroom-calathea",
+    "type": "watering",
+    "date": "2026-07-13T08:30:00",
+    "author": "Kike",
+    "note": "Filtered water as always"
+  },
+  {
+    "id": "d7eebdc0-86c2-4531-9733-51dc8e0e793b",
+    "plantId": "bathroom-calathea",
+    "type": "misting",
+    "date": "2026-07-15T08:30:00",
+    "author": "Kike",
+    "note": null
+  },
+  {
+    "id": "0e9314a2-d503-457a-bec0-62f83ca4fd0a",
+    "plantId": "bathroom-calathea",
+    "type": "watering",
+    "date": "2026-07-17T08:35:00",
+    "author": "Pepa",
+    "note": null
+  },
+  {
+    "id": "d134338a-bd08-4a15-bd02-289df2f11c60",
+    "plantId": "bathroom-calathea",
+    "type": "photo",
+    "date": "2026-07-19T10:00:00",
+    "author": "Pepa",
+    "note": "Full recovery after the mite scare — new leaf opening"
+  },
+  {
+    "id": "61f65c56-e3b5-42b6-8ba6-c102c7a55122",
+    "plantId": "bathroom-calathea",
+    "type": "watering",
+    "date": "2026-07-21T08:30:00",
+    "author": "Kike",
+    "note": null
+  },
+  {
+    "id": "1addda31-694e-4039-9536-4e607a6c3f7d",
+    "plantId": "studio-snake-plant",
+    "type": "watering",
+    "date": "2026-06-26T12:00:00",
+    "author": "Kike",
+    "note": null
+  },
+  {
+    "id": "d095c413-688b-4ae1-a733-2aab08bcac08",
+    "plantId": "studio-snake-plant",
+    "type": "watering",
+    "date": "2026-07-10T12:20:00",
+    "author": "Kike",
+    "note": "Soil bone dry two knuckles down"
+  }
+]

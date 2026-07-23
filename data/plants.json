@@ -1,0 +1,260 @@
+[
+  {
+    "id": "living-room-monstera",
+    "name": "Living room monstera",
+    "species": "Monstera deliciosa",
+    "nickname": "The Monster",
+    "location": {
+      "room": "Living room",
+      "orientation": "east",
+      "detail": "Next to the window, 1 m from the glass"
+    },
+    "photo": "img/living-room-monstera.svg",
+    "acquired": "2024-03-15",
+    "parent": null,
+    "care": {
+      "reference": {
+        "source": "The Complete Houseplant Handbook",
+        "light": "Bright indirect",
+        "sun_need": "high",
+        "watering_days_summer": 7,
+        "watering_days_winter": 12,
+        "humidity": "Medium-high, appreciates misting",
+        "feeding": "Biweekly in spring–summer",
+        "substrate_recipe": [
+          {
+            "component": "All-purpose potting mix",
+            "ratio": "60%"
+          },
+          {
+            "component": "Perlite",
+            "ratio": "30%"
+          },
+          {
+            "component": "Pine bark",
+            "ratio": "10%"
+          }
+        ],
+        "toxic_to_pets": true
+      },
+      "observed": {
+        "watering_days_summer": 14,
+        "watering_days_summer_note": "In our house it thrives with far less water than the literature says",
+        "humidity": "Does fine without misting",
+        "humidity_note": "Skipped misting all of last winter, zero crispy edges"
+      }
+    },
+    "general_notes": "The plant that started it all.\n\nCame home tiny from the flower market in March 2024 and now owns the living room corner. First fenestrated leaf appeared in September 2024 — we celebrated with vermouth.\n\n- Climbs a coco pole since spring 2025\n- Leaves get wiped monthly, she repays it in shine\n- **Lesson learned**: droopy leaves here mean *thirst*, not overwatering",
+    "status": "active"
+  },
+  {
+    "id": "kitchen-pothos",
+    "name": "Kitchen pothos",
+    "species": "Epipremnum aureum",
+    "nickname": "Rapunzel",
+    "location": {
+      "room": "Kitchen",
+      "orientation": "south",
+      "detail": "Hanging from the shelf above the counter, out of direct sun"
+    },
+    "photo": "img/kitchen-pothos.svg",
+    "acquired": "2023-11-02",
+    "parent": null,
+    "care": {
+      "reference": {
+        "source": "Grower tag + r/houseplants wiki",
+        "light": "Bright indirect, tolerates low light",
+        "sun_need": "medium",
+        "watering_days_summer": 7,
+        "watering_days_winter": 14,
+        "humidity": "Undemanding",
+        "feeding": "Monthly in the growing season",
+        "substrate_recipe": [
+          {
+            "component": "All-purpose potting mix",
+            "ratio": "70%"
+          },
+          {
+            "component": "Perlite",
+            "ratio": "30%"
+          }
+        ],
+        "toxic_to_pets": true
+      },
+      "observed": {}
+    },
+    "general_notes": "Unstoppable. Gets a trim every couple of months or she reaches the toaster.\n\nMother of the bedroom cutting (June 2026) — see the family line on the profile.",
+    "status": "active"
+  },
+  {
+    "id": "bedroom-pothos-cutting",
+    "name": "Bedroom pothos cutting",
+    "species": "Epipremnum aureum",
+    "nickname": "Rapunzel Jr.",
+    "location": {
+      "room": "Bedroom",
+      "orientation": "east",
+      "detail": "On the dresser, morning light only"
+    },
+    "photo": null,
+    "acquired": "2026-06-20",
+    "parent": "kitchen-pothos",
+    "care": {
+      "reference": {
+        "source": "Same care as the mother plant",
+        "light": "Bright indirect, tolerates low light",
+        "sun_need": "medium",
+        "watering_days_summer": 7,
+        "watering_days_winter": 14,
+        "humidity": "Undemanding",
+        "feeding": "Not yet — too young, start next spring",
+        "substrate_recipe": [
+          {
+            "component": "All-purpose potting mix",
+            "ratio": "70%"
+          },
+          {
+            "component": "Perlite",
+            "ratio": "30%"
+          }
+        ],
+        "toxic_to_pets": true
+      },
+      "observed": {}
+    },
+    "general_notes": "A three-node cutting from Rapunzel, rooted in a water glass on the kitchen windowsill for a month, potted up on July 20th.\n\nStill settling in — no watering routine established yet.",
+    "status": "active"
+  },
+  {
+    "id": "bathroom-calathea",
+    "name": "Bathroom calathea",
+    "species": "Goeppertia orbifolia",
+    "nickname": "La Dramática",
+    "location": {
+      "room": "Bathroom",
+      "orientation": "north",
+      "detail": "On the shelf by the frosted window — loves the shower steam"
+    },
+    "photo": "img/bathroom-calathea.svg",
+    "acquired": "2025-04-19",
+    "parent": null,
+    "care": {
+      "reference": {
+        "source": "Calathea care guide, ourhouseplants.com",
+        "light": "Medium indirect, never direct sun",
+        "sun_need": "low",
+        "watering_days_summer": 4,
+        "watering_days_winter": 8,
+        "humidity": "High — 60%+ or crispy edges",
+        "feeding": "Monthly at half strength, spring–summer",
+        "substrate_recipe": [
+          {
+            "component": "Coco coir",
+            "ratio": "40%"
+          },
+          {
+            "component": "All-purpose potting mix",
+            "ratio": "30%"
+          },
+          {
+            "component": "Perlite",
+            "ratio": "20%"
+          },
+          {
+            "component": "Orchid bark",
+            "ratio": "10%"
+          }
+        ],
+        "toxic_to_pets": false
+      },
+      "observed": {}
+    },
+    "general_notes": "Earned her nickname the first week: folds up like an umbrella at the slightest offense.\n\n- Only filtered or rain water — tap water browns the edges in days\n- Survived a spider-mite scare in early July 2026 (neem oil, twice)\n- Folds her leaves up every evening; it still looks like a magic trick",
+    "status": "active"
+  },
+  {
+    "id": "studio-snake-plant",
+    "name": "Studio snake plant",
+    "species": "Dracaena trifasciata",
+    "nickname": "Las Espadas",
+    "location": {
+      "room": "Studio",
+      "orientation": "west",
+      "detail": "Floor pot beside the bookshelf, afternoon light"
+    },
+    "photo": "img/studio-snake-plant.svg",
+    "acquired": "2022-09-30",
+    "parent": null,
+    "care": {
+      "reference": {
+        "source": "Succulent & semi-succulent handbook",
+        "light": "Anything from low light to full sun",
+        "sun_need": "low",
+        "watering_days_summer": 14,
+        "watering_days_winter": 30,
+        "humidity": "Irrelevant",
+        "feeding": "Twice a year at most",
+        "substrate_recipe": [
+          {
+            "component": "Cactus mix",
+            "ratio": "70%"
+          },
+          {
+            "component": "Perlite",
+            "ratio": "30%"
+          }
+        ],
+        "toxic_to_pets": true
+      },
+      "observed": {
+        "watering_days_winter": 40,
+        "watering_days_winter_note": "The studio stays cold in winter — monthly watering rotted a leaf in 2023, forty days works"
+      }
+    },
+    "general_notes": "The veteran. Predates the whole plant obsession and has survived two moves, one flooding (Pepa) and one month of total neglect (Kike).\n\nPups appeared in spring 2025; we still have not divided them.",
+    "status": "active"
+  },
+  {
+    "id": "wishlist-alocasia-zebrina",
+    "name": "Alocasia zebrina",
+    "species": "Alocasia zebrina",
+    "nickname": null,
+    "location": {
+      "room": "Living room",
+      "orientation": "east",
+      "detail": "Would go on the plant stand next to the monstera"
+    },
+    "photo": null,
+    "acquired": null,
+    "parent": null,
+    "care": {
+      "reference": {
+        "source": "Alocasia guide, thespruce.com",
+        "light": "Bright indirect",
+        "sun_need": "medium",
+        "watering_days_summer": 7,
+        "watering_days_winter": 12,
+        "humidity": "High — would appreciate the humidifier",
+        "feeding": "Every 2–3 weeks in the growing season",
+        "substrate_recipe": [
+          {
+            "component": "All-purpose potting mix",
+            "ratio": "50%"
+          },
+          {
+            "component": "Perlite",
+            "ratio": "25%"
+          },
+          {
+            "component": "Orchid bark",
+            "ratio": "25%"
+          }
+        ],
+        "toxic_to_pets": true
+      },
+      "observed": {}
+    },
+    "general_notes": "Spotted at the little plant shop on Calle Hierbabuena — those zebra stems! Holding off until the monstera corner gets its humidifier, alocasias are famously dramatic about dry air.\n\nReportedly goes fully dormant in winter: do not panic, do not overwater.",
+    "status": "wishlist"
+  }
+]

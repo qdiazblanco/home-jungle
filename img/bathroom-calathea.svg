@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="Stylized calathea orbifolia illustration">
+  <rect width="320" height="320" fill="#f0ead9"/>
+  <!-- stems -->
+  <g stroke="#2b5137" stroke-width="6" fill="none" stroke-linecap="round">
+    <path d="M160 252 C150 210 128 190 110 168"/>
+    <path d="M160 252 C160 214 160 190 160 152"/>
+    <path d="M160 252 C170 212 194 192 212 170"/>
+  </g>
+  <!-- round striped leaves -->
+  <g>
+    <circle cx="104" cy="128" r="46" fill="#7ba184"/>
+    <g stroke="#3e6b4a" stroke-width="5" fill="none" opacity="0.8">
+      <path d="M104 172 C88 150 86 112 96 84"/>
+      <path d="M104 173 C104 146 104 112 104 82"/>
+      <path d="M104 172 C120 150 122 112 112 84"/>
+    </g>
+    <circle cx="160" cy="106" r="50" fill="#8fb097"/>
+    <g stroke="#33623f" stroke-width="5" fill="none" opacity="0.8">
+      <path d="M160 154 C142 130 140 90 150 60"/>
+      <path d="M160 155 C160 124 160 88 160 58"/>
+      <path d="M160 154 C178 130 180 90 170 60"/>
+    </g>
+    <circle cx="216" cy="132" r="44" fill="#7ba184"/>
+    <g stroke="#3e6b4a" stroke-width="5" fill="none" opacity="0.8">
+      <path d="M216 174 C200 152 198 116 208 90"/>
+      <path d="M216 175 C216 148 216 116 216 88"/>
+      <path d="M216 174 C232 152 234 116 224 90"/>
+    </g>
+  </g>
+  <!-- pot -->
+  <path d="M122 252 L198 252 L188 300 L132 300 Z" fill="#8a6d5a"/>
+  <rect x="114" y="244" width="92" height="14" rx="6" fill="#9a7a64"/>
+</svg>

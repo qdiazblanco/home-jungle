@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="Stylized monstera illustration">
+  <rect width="320" height="320" fill="#f0ead9"/>
+  <!-- stems -->
+  <g stroke="#2b5137" stroke-width="7" fill="none" stroke-linecap="round">
+    <path d="M160 250 C158 200 150 170 118 132"/>
+    <path d="M160 250 C162 195 172 160 208 122"/>
+    <path d="M160 250 C160 205 160 175 162 150"/>
+  </g>
+  <!-- leaves -->
+  <g>
+    <ellipse cx="105" cy="112" rx="52" ry="64" fill="#3e6b4a" transform="rotate(-24 105 112)"/>
+    <ellipse cx="222" cy="102" rx="55" ry="68" fill="#33623f" transform="rotate(20 222 102)"/>
+    <ellipse cx="162" cy="92" rx="46" ry="58" fill="#4a7d58"/>
+  </g>
+  <!-- fenestration slits -->
+  <g fill="#f0ead9">
+    <rect x="60" y="96" width="44" height="9" rx="4.5" transform="rotate(-24 82 100)"/>
+    <rect x="58" y="126" width="38" height="9" rx="4.5" transform="rotate(-24 77 130)"/>
+    <rect x="70" y="70" width="30" height="8" rx="4" transform="rotate(-24 85 74)"/>
+    <rect x="222" y="80" width="44" height="9" rx="4.5" transform="rotate(20 244 84)"/>
+    <rect x="226" y="112" width="38" height="9" rx="4.5" transform="rotate(20 245 116)"/>
+    <rect x="216" y="52" width="30" height="8" rx="4" transform="rotate(20 231 56)"/>
+    <rect x="118" y="76" width="32" height="8" rx="4"/>
+    <rect x="172" y="98" width="30" height="8" rx="4"/>
+  </g>
+  <!-- pot -->
+  <path d="M120 250 L200 250 L190 300 L130 300 Z" fill="#a85a3f"/>
+  <rect x="112" y="242" width="96" height="14" rx="6" fill="#b5654a"/>
+</svg>

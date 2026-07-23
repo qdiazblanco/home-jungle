@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="Stylized snake plant illustration">
+  <rect width="320" height="320" fill="#f0ead9"/>
+  <!-- blades -->
+  <g>
+    <path d="M116 252 C104 190 108 130 122 84 C130 120 132 200 128 252 Z" fill="#33623f"/>
+    <path d="M140 252 C134 170 140 100 156 44 C166 100 160 180 154 252 Z" fill="#3e6b4a"/>
+    <path d="M168 252 C168 180 176 120 192 72 C198 130 188 200 182 252 Z" fill="#2b5137"/>
+    <path d="M196 252 C198 200 208 150 222 112 C224 160 212 216 206 252 Z" fill="#4a7d58"/>
+    <path d="M98 252 C94 210 96 170 106 136 C112 170 110 220 108 252 Z" fill="#4a7d58"/>
+  </g>
+  <!-- pale edge accents -->
+  <g stroke="#d9b23c" stroke-width="3" fill="none" opacity="0.7">
+    <path d="M156 46 C142 102 136 176 140 248"/>
+    <path d="M191 74 C177 124 170 196 170 248"/>
+  </g>
+  <!-- pot -->
+  <path d="M112 252 L208 252 L196 306 L124 306 Z" fill="#a85a3f"/>
+  <rect x="104" y="244" width="112" height="14" rx="6" fill="#b5654a"/>
+</svg>
