@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Digital Garden</title>
+  <meta name="description" content="A living encyclopedia and day-to-day care tracker for our houseplants.">
+  <meta name="theme-color" content="#3e6b4a">
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="img/icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="img/icons/apple-touch-icon.png">
+
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Preload the whole module graph so the first uncached load fetches in
+       parallel instead of discovering imports level by level. -->
+  <link rel="modulepreload" href="js/app.js">
+  <link rel="modulepreload" href="js/router.js">
+  <link rel="modulepreload" href="js/store.js">
+  <link rel="modulepreload" href="js/github.js">
+  <link rel="modulepreload" href="js/settings.js">
+  <link rel="modulepreload" href="js/ui.js">
+  <link rel="modulepreload" href="js/views/today.js">
+  <link rel="modulepreload" href="js/views/care.js">
+  <link rel="modulepreload" href="js/views/plant.js">
+  <link rel="modulepreload" href="js/views/plant-form.js">
+  <link rel="modulepreload" href="js/views/settings-view.js">
+  <link rel="modulepreload" href="js/components/sync-status.js">
+  <link rel="modulepreload" href="js/components/warning-list.js">
+  <link rel="modulepreload" href="js/components/event-dialog.js">
+  <link rel="modulepreload" href="js/components/plant-row.js">
+  <link rel="modulepreload" href="js/components/care-edit-sheet.js">
+  <link rel="modulepreload" href="shared/effective-care.js">
+  <link rel="modulepreload" href="shared/dates.js">
+  <link rel="modulepreload" href="shared/season.js">
+  <link rel="modulepreload" href="shared/schedule.js">
+  <link rel="modulepreload" href="shared/warnings.js">
+  <link rel="modulepreload" href="shared/validate.js">
+  <link rel="modulepreload" href="shared/markdown.js">
+  <link rel="modulepreload" href="shared/ops.js">
+
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <a class="brand" href="#/">
+        <svg class="brand-leaf" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22c0-6 1-10 4-13 2.4-2.4 5-3 6-3 0 1-.6 3.6-3 6-3 3-7 4-7 10z" fill="currentColor"/><path d="M12 22c0-6-1-10-4-13C5.6 6.6 3 6 2 6c0 1 .6 3.6 3 6 3 3 7 4 7 10z" fill="currentColor" opacity=".55"/></svg>
+        Digital Garden
+      </a>
+      <div id="sync-status" class="sync-slot"></div>
+    </header>
+
+    <main id="view" class="view" tabindex="-1">
+      <div class="boot-message">
+        <p>Sprouting…</p>
+      </div>
+    </main>
+
+    <nav id="tab-bar" class="tab-bar" aria-label="Main navigation"></nav>
+  </div>
+
+  <div id="overlay-root"></div>
+
+  <noscript>
+    <div class="noscript-note">
+      Digital Garden needs JavaScript to grow. Please enable it and reload.
+    </div>
+  </noscript>
+</body>
+</html>

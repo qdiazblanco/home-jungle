@@ -1,0 +1,79 @@
+/* Design tokens — botanical notebook, light theme.
+   A future dark theme only needs to re-declare these under a media query
+   or a [data-theme] selector; components never hardcode colors. */
+
+:root {
+  /* Paper & ink */
+  --paper: #f6f2e8;
+  --paper-raised: #fffdf5;
+  --paper-sunken: #ede8d9;
+  --ink: #2b332a;
+  --ink-soft: #57614f;
+  --ink-faint: #7c8471;
+  --line: #d9d2bf;
+  --line-soft: #e7e1d0;
+
+  /* Greens & accents */
+  --leaf: #3e6b4a;
+  --leaf-deep: #2b5137;
+  --leaf-tint: #e1ecdc;
+  --terracotta: #a85a3f;
+  --terracotta-tint: #f3e1d8;
+
+  /* Watering urgency states.
+     Color is never the only signal — always paired with icon + text. */
+  --state-fine: #33623f;
+  --state-fine-bg: #e1ecdc;
+  --state-soon: #7a5d13;
+  --state-soon-bg: #f2e9cd;
+  --state-due: #8f4a11;
+  --state-due-bg: #f6e3cf;
+  --state-overdue: #8f2f26;
+  --state-overdue-bg: #f5dcd6;
+  --state-unknown: #4d5a66;
+  --state-unknown-bg: #e3e6e9;
+
+  /* Feedback */
+  --danger: #8f2f26;
+  --danger-bg: #f5dcd6;
+  --info-bg: #e7ecf2;
+  --info: #38506b;
+
+  /* Typography */
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.1875rem;
+  --text-xl: 1.4375rem;
+  --text-2xl: 1.75rem;
+
+  /* Space & shape */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --shadow-soft: 0 1px 3px rgba(43, 51, 42, 0.08), 0 4px 14px rgba(43, 51, 42, 0.07);
+  --shadow-lift: 0 2px 6px rgba(43, 51, 42, 0.12), 0 10px 28px rgba(43, 51, 42, 0.14);
+
+  /* Layout */
+  --view-max: 46rem;
+  --view-max-wide: 70rem;
+  --tab-bar-h: 3.5rem;
+  --header-h: 3.25rem;
+
+  /* Touch */
+  --tap-target: 44px;
+}

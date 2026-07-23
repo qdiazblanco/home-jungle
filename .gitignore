@@ -1,0 +1,9 @@
+# Private notebook of future ideas (see BRIEF.md) — intentionally never committed
+IDEAS.md
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Just in case a dependency ever sneaks in
+node_modules/

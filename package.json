@@ -1,0 +1,11 @@
+{
+  "name": "digital-garden",
+  "version": "1.0.0",
+  "description": "A living encyclopedia and care tracker for our houseplants — a static PWA on GitHub Pages",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "TZ=UTC node --test test/ && TZ=Europe/Madrid node --test test/",
+    "serve": "python3 -m http.server 8000 --directory .."
+  }
+}
