@@ -21,6 +21,7 @@ import { todayString, localTimestamp } from '../shared/dates.js';
 import { seasonForDay } from '../shared/season.js';
 import { getSettings, isGardener, onSettingsChange } from './settings.js';
 import { snackbar } from './ui.js';
+import { ensureAuthor } from './components/author-gate.js';
 
 const state = {
   phase: 'loading', // 'loading' | 'ready' | 'error'
@@ -263,8 +264,13 @@ export function commitGraceOpsNow() {
   notify();
 }
 
-/** One-tap (or multi-select) watering — one op, one commit. */
-export function waterPlants(plantIds, { note = null, date = null, type = 'watering' } = {}) {
+/**
+ * One-tap (or multi-select) logging with the undo grace window —
+ * one op, one commit. Used for water/feed quick actions.
+ * Prompts for the author once on a fresh device (events + commits carry it).
+ */
+export async function quickLog(plantIds, type = 'watering', { note = null, date = null } = {}) {
+  if (!(await ensureAuthor())) return;
   const snapshot = getSnapshot();
   const events = plantIds.map((id) => makeEvent(id, type, { note, date }));
   const names = plantIds.map((id) => snapshot.plantsById.get(id)?.name ?? id);
