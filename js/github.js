@@ -142,8 +142,8 @@ async function classifyResponse(res) {
   return new ApiError('validation', `Unexpected response ${status}: ${bodyMessage}`, { status });
 }
 
-async function apiFetch(path, { method = 'GET', accept, body } = {}) {
-  const { token } = getSettings();
+async function apiFetch(path, { method = 'GET', accept, body, token: tokenOverride } = {}) {
+  const token = tokenOverride ?? getSettings().token;
   let res;
   try {
     res = await fetch(`${API}${path}`, {
@@ -217,10 +217,14 @@ export async function putFile(path, text, sha, message) {
   return { sha: json.content?.sha };
 }
 
-/** Cheap authenticated probe used by Settings to validate a token. */
-export async function probeRepo() {
+/**
+ * Cheap authenticated probe used by Settings to validate a token.
+ * Pass { token } to probe a CANDIDATE token before it is saved — a bad
+ * token must never be stored, not even briefly.
+ */
+export async function probeRepo({ token } = {}) {
   const { owner, repo } = coordsOrThrow();
-  const res = await apiFetch(`/repos/${owner}/${repo}`);
+  const res = await apiFetch(`/repos/${owner}/${repo}`, { token });
   const json = await res.json();
   return { fullName: json.full_name, permissions: json.permissions ?? null };
 }
@@ -415,7 +419,10 @@ export async function flush() {
         await flushBatch(path, batch);
         batches += 1;
       }
-      engineState.lastError = null;
+      // Keep the parked-op explanation visible until every parked entry is
+      // resolved — a successful flush of the REST of the queue must not
+      // silently blank the error banner.
+      if (!readQueue().some((e) => e.parked)) engineState.lastError = null;
       if (batches) engineState.lastSyncAt = localTimestamp();
     });
   } catch (err) {
@@ -423,6 +430,12 @@ export async function flush() {
   } finally {
     engineState.flushing = false;
     notify();
+    // Cross-context race: an op enqueued by the other tab/PWA context while
+    // we held the lock (its own ifAvailable flush bailed) would otherwise
+    // wait for the next wakeup. Cheap self-check covers it.
+    if (!engineState.paused && !engineState.lastError && readQueue().some((e) => !e.parked)) {
+      scheduleFlush(1000);
+    }
   }
 }
 

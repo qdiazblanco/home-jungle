@@ -11,7 +11,7 @@
 // - Saving an edit stores a field-level diff (patch op), not a snapshot.
 
 import * as store from '../store.js';
-import { el, icon, clear } from '../ui.js';
+import { el, icon, clear, formField } from '../ui.js';
 import { PLANT_STATUSES, SUN_NEEDS } from '../../shared/validate.js';
 import { todayString } from '../../shared/dates.js';
 import { diffPlant } from '../../shared/ops.js';
@@ -65,10 +65,15 @@ export function render(container, params, routeName) {
     },
   );
 
+  // Hand-edited plants may lack these blocks; the form reads them directly.
+  state.location ??= { room: '', orientation: '', detail: '' };
+  state.care ??= {};
+  state.care.reference ??= {};
+  state.care.observed ??= {};
+
   /* ---------- field helpers ---------- */
 
-  const field = (label, input, hint = null) =>
-    el('div', { class: 'field' }, el('label', {}, label), input, hint ? el('p', { class: 'hint' }, hint) : null);
+  const field = (label, input, hint = null) => formField(label, input, { hint });
 
   const textInput = (get, set, attrs = {}) =>
     el('input', {

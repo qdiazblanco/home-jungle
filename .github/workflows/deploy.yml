@@ -26,8 +26,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Version = hash of the app shell (everything except data/). Data-only
+      # commits — every in-app watering — leave sw.js byte-identical, so
+      # phones are not prompted to "update" after each logged event.
       - name: Stamp service worker cache version
-        run: sed -i "s/__VERSION__/${GITHUB_SHA::12}/" sw.js
+        run: |
+          HASH=$(git ls-files | grep -v '^data/' | sort | xargs sha256sum | sha256sum | cut -c1-12)
+          sed -i "s/__VERSION__/${HASH}/" sw.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

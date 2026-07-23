@@ -324,6 +324,7 @@ textarea {
 /* ---------- Observed-override marker ---------- */
 
 .observed-mark {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -341,6 +342,13 @@ textarea {
   cursor: pointer;
   vertical-align: text-top;
   padding: 0;
+}
+
+/* Small dot, finger-sized hit area. */
+.observed-mark::after {
+  content: '';
+  position: absolute;
+  inset: -14px;
 }
 
 /* ---------- Forms ---------- */
@@ -379,18 +387,6 @@ textarea {
 .field .hint {
   font-size: var(--text-xs);
   color: var(--ink-faint);
-  margin-top: var(--sp-1);
-}
-
-.field--error input,
-.field--error select,
-.field--error textarea {
-  border-color: var(--danger);
-}
-
-.field .error-text {
-  font-size: var(--text-xs);
-  color: var(--danger);
   margin-top: var(--sp-1);
 }
 
@@ -797,7 +793,7 @@ textarea {
   border-bottom: none;
 }
 
-.care-table .editable-cell {
+.editable-cell {
   border: none;
   background: none;
   padding: var(--sp-1) var(--sp-2);
@@ -809,8 +805,14 @@ textarea {
   white-space: nowrap;
 }
 
-.care-table .editable-cell:hover {
+.editable-cell:hover {
   background: var(--leaf-tint);
+}
+
+/* Row actions stay finger-sized even in the dense table (touch tablets). */
+.care-table .btn--icon {
+  min-height: var(--tap-target);
+  min-width: var(--tap-target);
 }
 
 /* ---------- Selection bar (multi-select watering) ---------- */

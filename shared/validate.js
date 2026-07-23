@@ -24,6 +24,21 @@ export const EVENT_TYPES = [
 ];
 export const SUN_NEEDS = ['low', 'medium', 'high'];
 
+/** Canonical care parameters — observed values for these are legitimate even
+ * when the reference layer has no matching entry (the quick-edit sheet can
+ * record an observation before any literature value exists). */
+export const CARE_PARAMS = [
+  'source',
+  'light',
+  'sun_need',
+  'watering_days_summer',
+  'watering_days_winter',
+  'humidity',
+  'feeding',
+  'substrate_recipe',
+  'toxic_to_pets',
+];
+
 /**
  * @param {unknown} plants parsed plants.json
  * @param {unknown} events parsed events.json
@@ -111,7 +126,7 @@ export function validateData(plants, events, opts = {}) {
         });
         continue;
       }
-      if (!Object.hasOwn(reference, key)) {
+      if (!Object.hasOwn(reference, key) && !CARE_PARAMS.includes(key)) {
         issues.push({
           path: `${where}.care.observed.${key}`,
           message:

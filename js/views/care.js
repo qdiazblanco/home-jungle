@@ -261,7 +261,7 @@ function renderCards(root, rows, canEdit) {
     const { plant, status, care, seasonKey, lastFeed, actions } = row;
     const intervalField = care.fields[seasonKey];
     const meta = [
-      `watered ${fmtRelativeDay(status?.lastWatering)}`,
+      status?.lastWatering ? `watered ${fmtRelativeDay(status.lastWatering)}` : 'never watered',
       lastFeed ? `fed ${fmtRelativeDay(dayOf(lastFeed.date))}` : 'never fed',
       plant.location?.room,
     ].filter(Boolean);

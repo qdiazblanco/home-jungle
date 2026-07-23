@@ -155,7 +155,16 @@ function drawContent(root, draw) {
       ),
     );
   }
-  group('No log yet', unknown, 'log a first watering to start the rhythm');
+  group(
+    'No log yet',
+    unknown.filter((e) => e.status.reason === 'never-watered'),
+    'log a first watering to start the rhythm',
+  );
+  group(
+    'No rhythm set',
+    unknown.filter((e) => e.status.reason === 'no-interval'),
+    'set watering days in Care to start the schedule',
+  );
   group('Doing fine', fine);
 
   /* ---- selection action bar ---- */

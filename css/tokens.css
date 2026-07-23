@@ -9,7 +9,7 @@
   --paper-sunken: #ede8d9;
   --ink: #2b332a;
   --ink-soft: #57614f;
-  --ink-faint: #7c8471;
+  --ink-faint: #68705d; /* 4.6:1 on --paper — meta text stays AA-readable */
   --line: #d9d2bf;
   --line-soft: #e7e1d0;
 
@@ -17,7 +17,7 @@
   --leaf: #3e6b4a;
   --leaf-deep: #2b5137;
   --leaf-tint: #e1ecdc;
-  --terracotta: #a85a3f;
+  --terracotta: #96492f; /* 5.0:1 on its tint — the observed marker must stay legible */
   --terracotta-tint: #f3e1d8;
 
   /* Watering urgency states.

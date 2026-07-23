@@ -5,7 +5,7 @@
 import * as store from '../store.js';
 import * as gh from '../github.js';
 import { getSettings, saveSettings, isGardener, repoCoords } from '../settings.js';
-import { el, icon, clear, confirmDialog } from '../ui.js';
+import { el, icon, clear, confirmDialog, formField } from '../ui.js';
 import { KNOWN_GARDENERS } from '../components/author-gate.js';
 
 export function render(container) {
@@ -16,6 +16,63 @@ export function render(container) {
     drawContent(root, draw);
   };
   draw();
+}
+
+/**
+ * Token input + validate flow, shared by the visitor unlock and the
+ * gardener "replace expired token" paths. The candidate token is probed
+ * BEFORE being saved — an invalid token is never stored, not even briefly,
+ * and the op queue is never touched (queued changes flush with the new
+ * token once it validates).
+ */
+function tokenEntry(draw, { replacing = false } = {}) {
+  const wrap = el('div');
+  const tokenInput = el('input', {
+    type: 'password',
+    placeholder: 'github_pat_…',
+    autocomplete: 'off',
+  });
+  const feedback = el('p', { class: 'small', style: 'min-height:1.2em', role: 'status' });
+
+  wrap.append(
+    formField(replacing ? 'New personal access token' : 'Personal access token', tokenInput),
+    feedback,
+    el(
+      'div',
+      { class: 'sheet__actions' },
+      el(
+        'button',
+        {
+          class: 'btn btn--primary',
+          onclick: async (e) => {
+            const token = tokenInput.value.trim();
+            if (!token) return;
+            const button = e.currentTarget;
+            button.disabled = true;
+            feedback.textContent = 'Checking the token against the repository…';
+            try {
+              const probe = await gh.probeRepo({ token });
+              if (probe.permissions && probe.permissions.push === false) {
+                throw new gh.ApiError('auth', 'This token cannot write to the repository.');
+              }
+              saveSettings({ token });
+              gh.resumeAfterAuthFix();
+              await store.load();
+              draw();
+            } catch (err) {
+              feedback.textContent =
+                err.kind === 'not-found'
+                  ? 'The token was rejected or cannot see this repository — check the repo access you granted it.'
+                  : `Could not validate the token: ${err.message}`;
+              button.disabled = false;
+            }
+          },
+        },
+        replacing ? 'Replace token' : 'Unlock gardener mode',
+      ),
+    ),
+  );
+  return wrap;
 }
 
 function drawContent(root, draw) {
@@ -39,6 +96,14 @@ function drawContent(root, draw) {
         ' ',
         el('strong', {}, 'Gardener mode'),
         ' — this device can water, log and edit.',
+      ),
+    );
+    accessCard.appendChild(
+      el(
+        'details',
+        {},
+        el('summary', { class: 'small' }, 'Replace the token (e.g. after it expired)'),
+        tokenEntry(draw, { replacing: true }),
       ),
     );
     accessCard.appendChild(
@@ -88,56 +153,7 @@ function drawContent(root, draw) {
         ' — browsing only. Paste the garden token to unlock editing on this device.',
       ),
     );
-
-    const tokenInput = el('input', {
-      type: 'password',
-      placeholder: 'github_pat_…',
-      autocomplete: 'off',
-      'aria-label': 'GitHub fine-grained personal access token',
-    });
-    const feedback = el('p', { class: 'small', style: 'min-height:1.2em' });
-
-    accessCard.append(
-      el('div', { class: 'field' }, el('label', {}, 'Personal access token'), tokenInput),
-      feedback,
-      el(
-        'div',
-        { class: 'sheet__actions' },
-        el(
-          'button',
-          {
-            class: 'btn btn--primary',
-            onclick: async (e) => {
-              const token = tokenInput.value.trim();
-              if (!token) return;
-              const button = e.currentTarget;
-              button.disabled = true;
-              feedback.textContent = 'Checking the token against the repository…';
-              saveSettings({ token });
-              try {
-                const probe = await gh.probeRepo();
-                if (probe.permissions && probe.permissions.push === false) {
-                  throw new gh.ApiError('auth', 'This token cannot write to the repository.');
-                }
-                gh.resumeAfterAuthFix();
-                feedback.textContent = `Connected to ${probe.fullName} — welcome, gardener.`;
-                await store.load();
-                draw();
-              } catch (err) {
-                saveSettings({ token: '' });
-                feedback.textContent =
-                  err.kind === 'not-found'
-                    ? 'The token was rejected or cannot see this repository — check the repo access you granted it.'
-                    : `Could not validate the token: ${err.message}`;
-                button.disabled = false;
-              }
-            },
-          },
-          'Unlock gardener mode',
-        ),
-      ),
-    );
-
+    accessCard.appendChild(tokenEntry(draw));
     accessCard.appendChild(tokenGuide(coords));
   }
   root.appendChild(accessCard);
@@ -146,7 +162,7 @@ function drawContent(root, draw) {
 
   root.appendChild(el('div', { class: 'section-title' }, el('h2', {}, 'Gardener')));
   const authorCard = el('div', { class: 'card' });
-  const authorSeg = el('div', { class: 'segmented', role: 'radiogroup', 'aria-label': 'Author' });
+  const authorSeg = el('div', { class: 'segmented', role: 'group', 'aria-label': 'Author' });
   const drawAuthors = () => {
     authorSeg.textContent = '';
     for (const name of KNOWN_GARDENERS) {
@@ -188,7 +204,7 @@ function drawContent(root, draw) {
 
   root.appendChild(el('div', { class: 'section-title' }, el('h2', {}, 'Season')));
   const seasonCard = el('div', { class: 'card' });
-  const seasonSeg = el('div', { class: 'segmented', role: 'radiogroup', 'aria-label': 'Season override' });
+  const seasonSeg = el('div', { class: 'segmented', role: 'group', 'aria-label': 'Season override' });
   const seasons = [
     ['auto', 'Auto'],
     ['summer', 'Force summer'],
@@ -268,7 +284,7 @@ function drawContent(root, draw) {
         `Loaded from ${state.source === 'api' ? 'the GitHub API' : state.source === 'mirror' ? 'the on-device mirror (offline?)' : 'the published site'}.`),
       state.issues.length
         ? el('div', {},
-            el('p', { class: 'small' }, el('strong', {}, `${state.issues.length} data wrinkles:`)),
+            el('p', { class: 'small' }, el('strong', {}, `${state.issues.length} data ${state.issues.length === 1 ? 'wrinkle' : 'wrinkles'}:`)),
             el('pre', {}, state.issues.map((i) => `• ${i.path}: ${i.message}`).join('\n')))
         : null,
       el(

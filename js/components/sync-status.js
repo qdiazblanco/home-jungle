@@ -26,7 +26,7 @@ export function mountSyncStatus(container) {
         'button',
         {
           class: `sync-chip sync-chip--${status.state}`,
-          'aria-label': `Sync status: ${status.state}`,
+          'aria-label': `Sync status: ${content[1]}`,
           onclick: () => openDetail(),
         },
         ...content,

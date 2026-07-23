@@ -4,7 +4,7 @@
 
 import * as store from '../store.js';
 import { todayString } from '../../shared/dates.js';
-import { el, icon, showSheet } from '../ui.js';
+import { el, icon, showSheet, formField } from '../ui.js';
 import { ensureAuthor } from './author-gate.js';
 
 const TYPES = [
@@ -67,10 +67,10 @@ export async function openEventDialog(plant, { type = 'note', onLogged } = {}) {
     typeGrid,
     hint,
     el('div', { class: 'field-row' },
-      el('div', { class: 'field' }, el('label', {}, 'When'), dateInput),
-      el('div', { class: 'field' }, el('label', {}, 'By'), el('input', { type: 'text', value: author, disabled: true })),
+      formField('When', dateInput),
+      formField('By', el('input', { type: 'text', value: author, disabled: true })),
     ),
-    el('div', { class: 'field' }, el('label', {}, 'Note'), noteInput),
+    formField('Note', noteInput),
     el(
       'div',
       { class: 'sheet__actions' },

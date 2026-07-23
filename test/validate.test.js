@@ -61,6 +61,15 @@ describe('validateData — issues (render + banner)', () => {
     assert.match(messagesOf(issues), /matches no reference parameter/);
   });
 
+  it('accepts canonical care params observed without a reference twin', () => {
+    // The quick-edit sheet can record an observation before any literature
+    // value exists — that must not be flagged as a typo.
+    const plant = makePlant({ care: { reference: {}, observed: { watering_days_summer: 10 } } });
+    const { errors, issues } = validateData([plant], []);
+    assert.equal(errors.length, 0);
+    assert.deepEqual(issues, []);
+  });
+
   it('flags observed nulls and orphan _note companions', () => {
     const plant = makePlant();
     plant.care.observed = { humidity: null, feeding_note: 'orphan' };

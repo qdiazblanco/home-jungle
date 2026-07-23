@@ -29,6 +29,7 @@ const tabBarEl = document.getElementById('tab-bar');
 
 let route = { name: 'today', params: {} };
 let dismissedIssues = false;
+let renderedPhase = null;
 
 /* ---------------- tab bar ---------------- */
 
@@ -126,6 +127,7 @@ function renderIssuesBanner(container, issues) {
 
 function renderView() {
   const state = store.getState();
+  renderedPhase = state.phase;
   renderTabBar();
 
   if (state.phase === 'loading') {
@@ -157,7 +159,10 @@ startRouter((next) => {
 });
 
 store.subscribe(() => {
-  if (SELF_MANAGED.has(route.name)) return;
+  // Skip store-driven re-renders of form views only once they have rendered
+  // with ready data — the initial loading→ready transition must still draw
+  // (otherwise a deep link to #/add would hang on the loading screen).
+  if (SELF_MANAGED.has(route.name) && renderedPhase === 'ready') return;
   renderView();
 });
 onSettingsChange(() => renderTabBar());
@@ -175,12 +180,20 @@ if ('serviceWorker' in navigator && !/^(localhost|127\.|192\.168\.)/.test(locati
     try {
       const reg = await navigator.serviceWorker.register('./sw.js');
 
+      // Reload only when the user explicitly activated an update — the
+      // first install also fires controllerchange (clients.claim) and must
+      // not yank the page from under the visitor.
+      let activationRequested = false;
+
       const promptUpdate = (worker) => {
         snackbar({
           message: 'A new version of the garden is ready.',
           actionLabel: 'Refresh',
           duration: 0,
-          onAction: () => worker.postMessage({ type: 'SKIP_WAITING' }),
+          onAction: () => {
+            activationRequested = true;
+            worker.postMessage({ type: 'SKIP_WAITING' });
+          },
         });
       };
 
@@ -196,7 +209,7 @@ if ('serviceWorker' in navigator && !/^(localhost|127\.|192\.168\.)/.test(locati
 
       let reloaded = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!reloaded) {
+        if (activationRequested && !reloaded) {
           reloaded = true;
           window.location.reload();
         }

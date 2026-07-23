@@ -7,7 +7,7 @@
 import * as store from '../store.js';
 import { effectiveCare } from '../../shared/effective-care.js';
 import { SUN_NEEDS } from '../../shared/validate.js';
-import { el, showSheet, snackbar } from '../ui.js';
+import { el, showSheet, snackbar, formField } from '../ui.js';
 
 export const QUICK_PARAMS = {
   watering_days_summer: { label: 'Watering rhythm — summer', kind: 'days', unit: 'days' },
@@ -83,7 +83,7 @@ export function openCareEdit(plant, key) {
     getValue = () => days;
   } else if (spec.kind === 'enum') {
     let value = startValue ?? spec.options[0];
-    const seg = el('div', { class: 'segmented', role: 'radiogroup' });
+    const seg = el('div', { class: 'segmented', role: 'group' });
     const drawSeg = () => {
       seg.textContent = '';
       for (const option of spec.options) {
@@ -108,7 +108,7 @@ export function openCareEdit(plant, key) {
     getValue = () => value;
   } else if (spec.kind === 'bool') {
     let value = Boolean(startValue);
-    const seg = el('div', { class: 'segmented', role: 'radiogroup' });
+    const seg = el('div', { class: 'segmented', role: 'group' });
     const drawSeg = () => {
       seg.textContent = '';
       for (const option of [true, false]) {
@@ -133,7 +133,7 @@ export function openCareEdit(plant, key) {
     getValue = () => value;
   } else {
     const input = el('input', { type: 'text', value: startValue == null ? '' : String(startValue) });
-    body.appendChild(el('div', { class: 'field' }, el('label', {}, 'Our observation'), input));
+    body.appendChild(formField('Our observation', input));
     getValue = () => input.value.trim();
   }
 
@@ -142,7 +142,7 @@ export function openCareEdit(plant, key) {
     value: field.note ?? '',
     placeholder: 'Why? e.g. "thrives with far less water"',
   });
-  body.appendChild(el('div', { class: 'field' }, el('label', {}, 'Note (the why)'), noteInput));
+  body.appendChild(formField('Note (the why)', noteInput));
 
   const actions = el('div', { class: 'sheet__actions' });
 

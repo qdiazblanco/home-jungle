@@ -127,13 +127,42 @@ export function showSheet({ title, center = false, onClose } = {}) {
     sheet,
   );
 
+  const opener = document.activeElement;
+
   const close = () => {
     document.removeEventListener('keydown', onKey);
     backdrop.remove();
+    if (opener && document.contains(opener)) opener.focus?.();
     onClose?.();
   };
+
+  const focusables = () =>
+    [...sheet.querySelectorAll('input, select, textarea, button, a[href], [tabindex]')].filter(
+      (n) => !n.disabled && n.offsetParent !== null,
+    );
+
   const onKey = (e) => {
-    if (e.key === 'Escape') close();
+    if (e.key === 'Escape') {
+      close();
+      return;
+    }
+    // Light focus trap: Tab cycles inside the sheet.
+    if (e.key === 'Tab') {
+      const items = focusables();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      } else if (!sheet.contains(document.activeElement)) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
   };
 
   backdrop.addEventListener('click', (e) => {
@@ -143,6 +172,34 @@ export function showSheet({ title, center = false, onClose } = {}) {
   overlayRoot().appendChild(backdrop);
   sheet.querySelector('input, select, textarea, button')?.focus?.();
   return { close, body, sheet };
+}
+
+/* ---------- labelled form field ---------- */
+
+let fieldSeq = 0;
+
+/**
+ * A .field block whose <label> is programmatically associated with the
+ * control (for/id) when the content is or contains a real form control.
+ * Button-group controls (steppers, segmented) keep sibling labels — wrapping
+ * them in a <label> would forward label clicks to the first button.
+ */
+export function formField(labelText, input, { hint } = {}) {
+  const labelEl = el('label', {}, labelText);
+  const target = ['INPUT', 'SELECT', 'TEXTAREA'].includes(input?.tagName)
+    ? input
+    : input?.querySelector?.('input, select, textarea');
+  if (target) {
+    if (!target.id) target.id = `field-${++fieldSeq}`;
+    labelEl.setAttribute('for', target.id);
+  }
+  return el(
+    'div',
+    { class: 'field' },
+    labelEl,
+    input,
+    hint ? el('p', { class: 'hint' }, hint) : null,
+  );
 }
 
 /** Confirmation dialog → Promise<boolean>. */
@@ -183,7 +240,10 @@ let activeSnackbar = null;
  * Returns { dismiss }. A new snackbar replaces the previous one.
  */
 export function snackbar({ message, actionLabel, onAction, duration = 5000, onTimeout }) {
-  activeSnackbar?.dismiss(true);
+  // A replaced snackbar can no longer offer its Undo, so its pending outcome
+  // must COMMIT (fire onTimeout), never silently vanish — otherwise a second
+  // quick-log within the grace window would strand the first op unsynced.
+  activeSnackbar?.dismiss(false);
 
   const bar = el(
     'div',
