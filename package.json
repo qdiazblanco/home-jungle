@@ -5,7 +5,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "TZ=UTC node --test test/ && TZ=Europe/Madrid node --test test/",
+    "test": "TZ=UTC node --test && TZ=Europe/Madrid node --test",
     "serve": "python3 -m http.server 8000 --directory .."
   }
 }
