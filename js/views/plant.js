@@ -373,7 +373,7 @@ function drawContent(root, id, draw) {
                 el('span', {}, part.component),
                 el('span', { class: 'num' }, `~${part.liters} L`))),
             el('p', { class: 'small muted', style: 'margin:0.5rem 0 0' },
-              'Assumes a standard round pot and the root ball moving along; split follows the ideal recipe.'),
+              'Assumes a standard round pot and the root ball moving along; the split follows the ideal recipe when one is set, otherwise the mix above.'),
           ),
         );
       } else if (canEdit) {
@@ -718,7 +718,16 @@ function openMixSheet(plant, care, draw) {
         class: 'btn btn--primary',
         onclick: () => {
           const cleaned = rows.filter((part) => part.component?.trim());
-          store.patchPlant(plant.id, { 'care.observed.substrate_recipe': cleaned });
+          if (cleaned.length) {
+            store.patchPlant(plant.id, { 'care.observed.substrate_recipe': cleaned });
+          } else if (hasOverride) {
+            // Emptying the sheet means "no separate current mix" — remove
+            // the override rather than storing a hollow [].
+            store.patchPlant(plant.id, {}, [
+              'care.observed.substrate_recipe',
+              'care.observed.substrate_recipe_note',
+            ]);
+          }
           close();
           draw();
         },
@@ -729,7 +738,7 @@ function openMixSheet(plant, care, draw) {
 
   body.append(
     el('p', { class: 'small muted' },
-      'What the pot actually holds right now. The ideal recipe (edited in the plant form) stays untouched — the repot calculator always follows the ideal.'),
+      'What the pot actually holds right now. The ideal recipe (edited in the plant form) stays untouched and drives the repot calculator whenever it exists.'),
     rowsWrap,
     actions,
   );
