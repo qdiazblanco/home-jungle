@@ -603,9 +603,12 @@ const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), hi);
 
 /** Pointer-drag in grid units; full redraw (of the LIVE root) on release. */
 function attachDrag(board, node, onMove) {
+  let activePointer = null;
   node.addEventListener('pointerdown', (event) => {
+    if (activePointer !== null) return; // one pointer drives a drag
     event.preventDefault();
     event.stopPropagation();
+    activePointer = event.pointerId;
     try {
       node.setPointerCapture(event.pointerId);
     } catch {
@@ -614,13 +617,16 @@ function attachDrag(board, node, onMove) {
     const startX = event.clientX;
     const startY = event.clientY;
     const scale = board.getBoundingClientRect().width / (board.viewBox.baseVal.width || 1);
-    const up = () => {
+    const up = (ev) => {
+      if (ev && ev.pointerId !== activePointer) return; // another finger lifted
+      activePointer = null;
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
       currentDraw?.();
     };
     const move = (ev) => {
+      if (ev.pointerId !== activePointer) return; // ignore other pointers
       if (ev.buttons === 0) return up(); // missed pointerup (window lost focus)
       onMove((ev.clientX - startX) / scale, (ev.clientY - startY) / scale);
     };

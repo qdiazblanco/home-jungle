@@ -1619,6 +1619,12 @@ code {
   white-space: nowrap;
 }
 
+.d3-label--more {
+  color: var(--ink-faint);
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+
 .d3-wall {
   transform-origin: 0 0;
   backface-visibility: visible;

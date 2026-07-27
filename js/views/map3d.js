@@ -34,7 +34,9 @@ function windowSpans(room, orientations, wall) {
     if (!spot || spot[0] !== wall) continue;
     const winLen = Math.min(2.4, len * 0.38);
     const center = len * spot[1];
-    spans.push([Math.max(0.2, center - winLen / 2), Math.min(len - 0.2, center + winLen / 2)]);
+    const from = Math.max(0.2, center - winLen / 2);
+    const to = Math.min(len - 0.2, center + winLen / 2);
+    if (to - from > 0.05) spans.push([from, to]); // tiny walls: no window
   }
   spans.sort((a, b) => a[0] - b[0]);
   const merged = [];
@@ -53,7 +55,7 @@ function wallPieces(len, spans) {
   for (const [from, to] of spans) {
     if (from > cursor) pieces.push({ from: cursor, to: from, glass: false });
     pieces.push({ from, to, glass: true });
-    cursor = to;
+    cursor = Math.max(cursor, to);
   }
   if (cursor < len) pieces.push({ from: cursor, to: len, glass: false });
   return pieces;
@@ -70,20 +72,37 @@ export function render3D(host, { gridW, gridH, rooms, byRoom, statusOf, plantSpr
   const stage = el('div', { class: 'd3-stage' });
   host.appendChild(stage);
 
+  let scene = null;
+  let billboards = [];
+  let lastWidth = 0;
+
+  const apply = () => {
+    if (!scene) return;
+    scene.style.transform = `rotateX(${orbit.tilt}deg) rotateZ(${orbit.yaw}deg)`;
+    const face = `rotateZ(${-orbit.yaw}deg) rotateX(${-orbit.tilt}deg)`;
+    for (const sprite of billboards) {
+      sprite.style.transform = `${face} translate(-50%, -100%)`;
+    }
+    onYaw?.(orbit.yaw);
+  };
+
   const build = () => {
     const width = stage.clientWidth || 340;
+    lastWidth = width;
+    stage.textContent = '';
+    billboards = [];
+
     const unit = width / (gridW + 4); // margin for the orbiting corners
     const sceneW = gridW * unit;
     const sceneH = gridH * unit;
     stage.style.height = `${Math.max(240, sceneH * 0.95 + 3 * unit)}px`;
 
-    const scene = el('div', { class: 'd3-scene' });
+    scene = el('div', { class: 'd3-scene' });
     scene.style.width = `${sceneW}px`;
     scene.style.height = `${sceneH}px`;
     scene.style.marginLeft = `${-sceneW / 2}px`;
     scene.style.marginTop = `${-sceneH / 2}px`;
 
-    const billboards = [];
     const px = (units) => units * unit;
 
     /* ground slab */
@@ -94,7 +113,11 @@ export function render3D(host, { gridW, gridH, rooms, byRoom, statusOf, plantSpr
       }),
     );
 
-    /* rooms: floor, label, walls with window openings */
+    // Glass renders in a second pass, nudged half a pixel toward its room's
+    // interior — otherwise a neighbouring room's coplanar solid wall paints
+    // over the opening (the same shared-wall lesson as the plan view).
+    const glassPieces = [];
+
     for (const room of rooms) {
       scene.appendChild(
         el('div', {
@@ -124,28 +147,22 @@ export function render3D(host, { gridW, gridH, rooms, byRoom, statusOf, plantSpr
         for (const piece of wallPieces(side.len, windowSpans(room, orientations, side.wall))) {
           const pieceLen = piece.to - piece.from;
           if (pieceLen <= 0.05) continue;
-          const along = piece.from;
-          const style =
-            side.dir === 'h'
-              ? `left:${px(side.x + along)}px; top:${px(side.y)}px; width:${px(pieceLen)}px; height:${px(WALL_H)}px;` +
-                ` transform: rotateX(90deg);`
-              : `left:${px(side.x)}px; top:${px(side.y + along)}px; width:${px(pieceLen)}px; height:${px(WALL_H)}px;` +
-                ` transform: rotateZ(90deg) rotateX(90deg);`;
-          scene.appendChild(
-            el('div', {
-              class: `d3-wall d3-wall--${side.dir}${piece.glass ? ' d3-wall--glass' : ''}`,
-              style,
-            }),
-          );
+          if (piece.glass) {
+            glassPieces.push({ side, from: piece.from, len: pieceLen });
+            continue;
+          }
+          scene.appendChild(wallDiv(side, piece.from, pieceLen, false, px, 0, 0));
         }
       }
 
-      /* plants as billboards */
+      /* plants as billboards (same capacity rules as the plan view) */
       const roomPlants = room.plants ?? [];
       const pad = 0.9;
       const step = 1.9;
       const cols = Math.max(1, Math.floor((room.w - pad * 2) / step));
-      roomPlants.forEach((plant, index) => {
+      const maxRows = Math.max(1, Math.floor((room.h - 1.6 - 0.7) / step));
+      const capacity = cols * maxRows;
+      roomPlants.slice(0, capacity).forEach((plant, index) => {
         const col = index % cols;
         const rowIndex = Math.floor(index / cols);
         const cx = room.x + pad + 0.5 + col * step;
@@ -161,53 +178,95 @@ export function render3D(host, { gridW, gridH, rooms, byRoom, statusOf, plantSpr
         scene.appendChild(anchor);
         billboards.push(sprite);
       });
+      if (roomPlants.length > capacity) {
+        scene.appendChild(
+          el(
+            'div',
+            {
+              class: 'd3-label d3-label--more',
+              style: `left:${px(room.x + room.w - 1.4)}px; top:${px(room.y + room.h - 1.1)}px; font-size:${Math.max(9, unit * 0.6)}px;`,
+            },
+            `+${roomPlants.length - capacity}`,
+          ),
+        );
+      }
     }
 
-    const apply = () => {
-      scene.style.transform = `rotateX(${orbit.tilt}deg) rotateZ(${orbit.yaw}deg)`;
-      const face = `rotateZ(${-orbit.yaw}deg) rotateX(${-orbit.tilt}deg)`;
-      for (const sprite of billboards) {
-        sprite.style.transform = `${face} translate(-50%, -100%)`;
-      }
-      onYaw?.(orbit.yaw);
-    };
-    apply();
-
-    /* drag to orbit */
-    stage.addEventListener('pointerdown', (event) => {
-      if (event.target.closest('.d3-plant, .bp-tip')) return;
-      event.preventDefault();
-      try {
-        stage.setPointerCapture(event.pointerId);
-      } catch {
-        /* best-effort */
-      }
-      const startX = event.clientX;
-      const startY = event.clientY;
-      const startYaw = orbit.yaw;
-      const startTilt = orbit.tilt;
-      const move = (ev) => {
-        if (ev.buttons === 0) return up();
-        orbit.yaw = (startYaw + (ev.clientX - startX) * 0.4) % 360;
-        orbit.tilt = Math.min(78, Math.max(25, startTilt - (ev.clientY - startY) * 0.25));
-        apply();
-      };
-      const up = () => {
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', up);
-        window.removeEventListener('pointercancel', up);
-      };
-      window.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', up);
-      window.addEventListener('pointercancel', up);
-    });
+    for (const piece of glassPieces) {
+      const nudgeX = piece.side.wall === 'w' ? 0.5 : piece.side.wall === 'e' ? -0.5 : 0;
+      const nudgeY = piece.side.wall === 'n' ? 0.5 : piece.side.wall === 's' ? -0.5 : 0;
+      scene.appendChild(wallDiv(piece.side, piece.from, piece.len, true, px, nudgeX, nudgeY));
+    }
 
     stage.appendChild(scene);
+    apply();
   };
 
-  // The stage needs layout before it can be measured.
-  requestAnimationFrame(build);
+  /* drag to orbit — one pointer at a time, others ignored */
+  let activePointer = null;
+  stage.addEventListener('pointerdown', (event) => {
+    if (activePointer !== null) return;
+    if (event.target.closest('.d3-plant, .bp-tip')) return;
+    event.preventDefault();
+    activePointer = event.pointerId;
+    try {
+      stage.setPointerCapture(event.pointerId);
+    } catch {
+      /* best-effort */
+    }
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startYaw = orbit.yaw;
+    const startTilt = orbit.tilt;
+    const up = (ev) => {
+      if (ev && ev.pointerId !== activePointer) return;
+      activePointer = null;
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+    const move = (ev) => {
+      if (ev.pointerId !== activePointer) return;
+      if (ev.buttons === 0) return up();
+      // yaw stays continuous (no wrapping): the compass needle transitions,
+      // and a ±360° jump would spin it a full backwards turn.
+      orbit.yaw = startYaw + (ev.clientX - startX) * 0.4;
+      orbit.tilt = Math.min(78, Math.max(25, startTilt - (ev.clientY - startY) * 0.25));
+      apply();
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  });
+
+  /* build now and on real size changes (rotation, resize) */
+  if (typeof ResizeObserver !== 'undefined') {
+    const observer = new ResizeObserver(() => {
+      if (!stage.isConnected) {
+        observer.disconnect();
+        return;
+      }
+      if (Math.abs((stage.clientWidth || 0) - lastWidth) >= 2) build();
+    });
+    observer.observe(stage); // first callback performs the initial build
+  } else {
+    requestAnimationFrame(build);
+  }
   return stage;
+}
+
+/** One wall slab (solid or glass), standing on its plan edge. */
+function wallDiv(side, along, pieceLen, glass, px, nudgeX, nudgeY) {
+  const style =
+    side.dir === 'h'
+      ? `left:${px(side.x + along) + nudgeX}px; top:${px(side.y) + nudgeY}px; width:${px(pieceLen)}px; height:${px(WALL_H)}px;` +
+        ` transform: rotateX(90deg);`
+      : `left:${px(side.x) + nudgeX}px; top:${px(side.y + along) + nudgeY}px; width:${px(pieceLen)}px; height:${px(WALL_H)}px;` +
+        ` transform: rotateZ(90deg) rotateX(90deg);`;
+  return el('div', {
+    class: `d3-wall d3-wall--${side.dir}${glass ? ' d3-wall--glass' : ''}`,
+    style,
+  });
 }
 
 /** Prepares render3D's room inputs from the raw layout + plant groups. */
