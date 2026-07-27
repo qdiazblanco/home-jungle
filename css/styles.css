@@ -1387,6 +1387,7 @@ code {
 /* ---------- Blueprint (house map) ---------- */
 
 .bp-card {
+  position: relative;
   padding: var(--sp-2);
 }
 
@@ -1400,21 +1401,41 @@ code {
   touch-action: none; /* editing owns the gestures; view mode scrolls freely */
 }
 
-/* While editing, room surfaces own the pointer — dots must not steal grabs. */
+/* While editing, room surfaces own the pointer — glyphs must not steal grabs. */
 .bp--editing .bp-plant {
   pointer-events: none;
 }
 
-.bp-walls {
+.bp-slab {
   fill: var(--paper-sunken);
+  stroke: none;
+}
+
+.bp-walls {
+  fill: none;
   stroke: var(--ink);
-  stroke-width: 0.25;
+  stroke-width: 0.5;
+  stroke-linejoin: round;
 }
 
 .bp-room__rect {
-  fill: var(--paper-raised);
-  stroke: var(--ink-soft);
-  stroke-width: 0.12;
+  stroke: var(--ink);
+  stroke-width: 0.26;
+  stroke-linejoin: round;
+}
+
+.bp-floor--a { fill: #fbf6ea; }
+.bp-floor--b { fill: #f7f0df; }
+.bp-floor--c { fill: #f3eee2; }
+
+.bp-room__boards {
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.bp-boards-line {
+  stroke: rgba(43, 51, 42, 0.05);
+  stroke-width: 0.06;
 }
 
 .bp--editing .bp-room__rect {
@@ -1423,8 +1444,18 @@ code {
   stroke-dasharray: 0.4 0.25;
 }
 
+.bp-window__gap {
+  stroke: var(--paper-raised);
+  stroke-width: 0.3;
+}
+
+.bp-window__glass {
+  stroke: #9fb6c4;
+  stroke-width: 0.12;
+}
+
 .bp-room__label {
-  font-size: 0.75px;
+  font-size: 0.78px;
   font-family: var(--font-display);
   fill: var(--ink);
   pointer-events: none;
@@ -1436,6 +1467,8 @@ code {
   pointer-events: none;
 }
 
+/* potted-plant glyphs */
+
 .bp-plant {
   cursor: pointer;
 }
@@ -1444,9 +1477,27 @@ code {
   fill: transparent;
 }
 
-.bp-plant__dot {
-  stroke: var(--paper-raised);
-  stroke-width: 0.08;
+.bp-plant__shadow {
+  fill: rgba(43, 51, 42, 0.16);
+}
+
+.bp-plant__pot {
+  fill: var(--terracotta);
+}
+
+.bp-plant__rim {
+  fill: #b5654a;
+}
+
+.bp-plant__leaf {
+  stroke: rgba(43, 51, 42, 0.25);
+  stroke-width: 0.05;
+}
+
+.bp-plant:hover .bp-plant__leaf,
+.bp-plant:focus .bp-plant__leaf {
+  stroke: var(--ink);
+  stroke-width: 0.09;
 }
 
 .bp-dot--fine { fill: var(--state-fine); }
@@ -1460,6 +1511,82 @@ code {
 .bp-legend__dot.bp-dot--due { background: var(--state-due); }
 .bp-legend__dot.bp-dot--overdue { background: var(--state-overdue); }
 .bp-legend__dot.bp-dot--unknown { background: var(--state-unknown); }
+
+/* compass */
+
+.bp-compass circle {
+  fill: var(--paper-raised);
+  stroke: var(--ink-soft);
+  stroke-width: 0.08;
+}
+
+.bp-compass path {
+  fill: var(--terracotta);
+}
+
+.bp-compass text {
+  font-size: 0.6px;
+  font-weight: 700;
+  fill: var(--ink);
+  font-family: var(--font-body);
+}
+
+/* hover / tap info card */
+
+.bp-tip {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  width: 15rem;
+  max-width: calc(100% - 12px);
+  padding: var(--sp-2);
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lift);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.bp-tip__photo {
+  flex: none;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--leaf-tint);
+}
+
+.bp-tip__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bp-tip__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+}
+
+.bp-tip__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.bp-tip__species {
+  font-size: var(--text-xs);
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+/* editor affordances */
 
 .bp-room__resize {
   fill: var(--leaf);
