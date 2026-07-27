@@ -17,11 +17,12 @@ import {
   formField,
 } from '../ui.js';
 import { effectiveCare } from '../../shared/effective-care.js';
-import { wateringStatus } from '../../shared/schedule.js';
+import { wateringStatus, lastEventOfType } from '../../shared/schedule.js';
 import { renderMarkdown } from '../../shared/markdown.js';
 import { dayOf, todayString } from '../../shared/dates.js';
 import { plantPhoto, stateChip } from '../components/plant-row.js';
-import { ensureAuthor } from '../components/author-gate.js';
+import { ensureAuthor, KNOWN_GARDENERS } from '../components/author-gate.js';
+import { repotPlan } from '../../shared/pot.js';
 import { uniquePlantId } from '../slug.js';
 import { navigate } from '../router.js';
 import { openCareEdit, QUICK_PARAMS } from '../components/care-edit-sheet.js';
@@ -128,6 +129,16 @@ function drawContent(root, id, draw) {
     );
   }
   if (plant.acquired) facts.push(`with us since ${fmtDay(plant.acquired, { withYear: 'always' })}`);
+  const potDiameter = Number(plant.pot?.diameter_cm) || null;
+  if (potDiameter) facts.push(`${potDiameter} cm pot`);
+  if (plant.status === 'active') {
+    const lastRepot = lastEventOfType(events, plant.id, 'repotting', today);
+    facts.push(
+      lastRepot
+        ? `last repotted ${fmtRelativeDay(dayOf(lastRepot.date))}`
+        : 'never repotted (in our log)',
+    );
+  }
   const parent = plant.parent ? plantsById.get(plant.parent) : null;
   const children = plants.filter((p) => p.parent === plant.id);
 
@@ -270,25 +281,97 @@ function drawContent(root, id, draw) {
     );
   }
 
-  /* ---------- substrate ---------- */
+  /* ---------- substrate: current (observed) vs ideal (reference) ---------- */
 
-  const recipe = care.values.substrate_recipe;
-  if (Array.isArray(recipe) && recipe.length) {
-    root.appendChild(el('div', { class: 'section-title' }, el('h2', {}, 'Substrate mix')));
+  const substrateField = care.fields.substrate_recipe;
+  const currentMix = substrateField?.source === 'observed' ? substrateField.observed : null;
+  const idealMix = substrateField?.reference;
+  const effectiveMix = care.values.substrate_recipe;
+
+  if ((Array.isArray(effectiveMix) && effectiveMix.length) || canEdit) {
     root.appendChild(
       el(
         'div',
-        { class: 'card' },
-        recipe.map((part) =>
-          el(
-            'div',
-            { class: 'care-param' },
-            el('span', {}, part.component),
-            el('strong', { class: 'num' }, part.ratio),
-          ),
-        ),
+        { class: 'section-title' },
+        el('h2', {}, 'Substrate'),
+        canEdit
+          ? el(
+              'button',
+              { class: 'btn btn--sm', onclick: () => openMixSheet(plant, care, draw) },
+              currentMix ? 'Edit current mix' : 'Log current mix',
+            )
+          : null,
       ),
     );
+
+    const mixList = (mix) =>
+      (mix ?? []).map((part) =>
+        el(
+          'div',
+          { class: 'care-param' },
+          el('span', {}, part.component),
+          el('strong', { class: 'num' }, String(part.ratio)),
+        ),
+      );
+
+    const substrateCard = el('div', { class: 'card' });
+    if (currentMix) {
+      substrateCard.appendChild(
+        el('p', { class: 'small', style: 'margin-bottom:4px' },
+          el('strong', {}, 'Current mix'), el('span', { class: 'muted' }, ' — what’s in the pot')),
+      );
+      substrateCard.append(...mixList(currentMix));
+      if (Array.isArray(idealMix) && idealMix.length) {
+        substrateCard.appendChild(
+          el('p', { class: 'small', style: 'margin:0.75rem 0 4px' },
+            el('strong', {}, 'Ideal recipe'), el('span', { class: 'muted' }, ' — the goal for the next repot')),
+        );
+        substrateCard.append(...mixList(idealMix));
+      }
+    } else if (Array.isArray(effectiveMix) && effectiveMix.length) {
+      substrateCard.append(...mixList(effectiveMix));
+      if (canEdit) {
+        substrateCard.appendChild(
+          el('p', { class: 'small muted', style: 'margin-top:0.5rem;margin-bottom:0' },
+            'This is the ideal recipe — “Log current mix” records what the pot actually holds.'),
+        );
+      }
+    } else {
+      substrateCard.appendChild(el('p', { class: 'muted small' }, 'No substrate recipe yet.'));
+    }
+    root.appendChild(substrateCard);
+
+    /* ---------- repotting calculator ---------- */
+    if (plant.status === 'active') {
+      const plan = potDiameter ? repotPlan(potDiameter, idealMix?.length ? idealMix : effectiveMix) : null;
+      if (plan) {
+        root.appendChild(
+          el(
+            'div',
+            { class: 'card' },
+            el('p', { class: 'small', style: 'margin-bottom:4px' },
+              el('strong', {}, 'Next repot (calculator)')),
+            el('div', { class: 'care-param' },
+              el('span', { class: 'care-param__label' }, 'Suggested next pot'),
+              el('strong', { class: 'num' }, `${plan.nextDiameter} cm (~${plan.nextVolumeLiters} L)`)),
+            el('div', { class: 'care-param' },
+              el('span', { class: 'care-param__label' }, 'Substrate to prepare'),
+              el('strong', { class: 'num' }, `~${plan.substrateLiters} L`)),
+            plan.components.map((part) =>
+              el('div', { class: 'care-param' },
+                el('span', {}, part.component),
+                el('span', { class: 'num' }, `~${part.liters} L`))),
+            el('p', { class: 'small muted', style: 'margin:0.5rem 0 0' },
+              'Assumes a standard round pot and the root ball moving along; the split follows the ideal recipe when one is set, otherwise the mix above.'),
+          ),
+        );
+      } else if (canEdit) {
+        root.appendChild(
+          el('p', { class: 'small muted' },
+            'Set the pot diameter (Edit → pot) to unlock the repotting calculator.'),
+        );
+      }
+    }
   }
 
   /* ---------- family line (propagation) ---------- */
@@ -359,6 +442,18 @@ function drawContent(root, id, draw) {
           el('div', { class: 'event-item__meta' }, `${fmtDateTime(event.date)} — ${event.author ?? '?'}`),
           event.note ? el('div', { class: 'small' }, event.note) : null,
         ),
+        canEdit
+          ? el(
+              'button',
+              {
+                class: 'btn btn--icon btn--ghost',
+                'aria-label': 'Edit this entry',
+                title: 'Edit this entry',
+                onclick: () => openEventEdit(event, draw),
+              },
+              icon('edit'),
+            )
+          : null,
         canEdit
           ? el(
               'button',
@@ -552,5 +647,209 @@ async function openCuttingSheet(mother) {
         'Take the cutting ✂️',
       ),
     ),
+  );
+}
+
+/* ---------- edit a logged event (author, date, note) ---------- */
+
+function openEventEdit(event, draw) {
+  const { close, body } = showSheet({ title: `Edit — ${event.type}` });
+  const today = todayString();
+  const originalDay = dayOf(event.date) ?? today;
+
+  const dateInput = el('input', { type: 'date', value: originalDay, max: today });
+  const noteInput = el('input', { type: 'text', value: event.note ?? '', placeholder: 'Optional note…' });
+
+  let author = event.author ?? '';
+  const authorSeg = el('div', { class: 'segmented', role: 'group', 'aria-label': 'Author' });
+  const drawAuthors = () => {
+    authorSeg.textContent = '';
+    for (const name of KNOWN_GARDENERS) {
+      authorSeg.appendChild(
+        el(
+          'button',
+          {
+            type: 'button',
+            'aria-pressed': String(author === name),
+            onclick: () => {
+              author = name;
+              drawAuthors();
+            },
+          },
+          name,
+        ),
+      );
+    }
+  };
+  drawAuthors();
+  const otherAuthor = el('input', {
+    type: 'text',
+    placeholder: 'Someone else…',
+    value: KNOWN_GARDENERS.includes(author) ? '' : author,
+    oninput: (e) => {
+      author = e.target.value.trim() || event.author;
+      drawAuthors();
+    },
+  });
+
+  body.append(
+    el('p', { class: 'small muted' }, 'Wrong name on a watering? Logged on the wrong day? Fix it here.'),
+    el('div', { class: 'field' }, el('label', {}, 'Who did it'), authorSeg),
+    formField('…or another name', otherAuthor),
+    formField('When', dateInput),
+    formField('Note', noteInput),
+    el(
+      'div',
+      { class: 'sheet__actions' },
+      el('button', { class: 'btn', onclick: () => close() }, 'Cancel'),
+      el(
+        'button',
+        {
+          class: 'btn btn--primary',
+          onclick: () => {
+            const changes = {};
+            if (author && author !== event.author) changes.author = author;
+            const day = dateInput.value && dateInput.value <= today ? dateInput.value : originalDay;
+            if (day !== originalDay) {
+              // Keep the original wall-clock time, move the calendar day.
+              const time = /T(\d{2}:\d{2}:\d{2})/.exec(event.date)?.[1] ?? '12:00:00';
+              changes.date = `${day}T${time}`;
+            }
+            const note = noteInput.value.trim() || null;
+            if (note !== (event.note ?? null)) changes.note = note;
+            if (Object.keys(changes).length) store.updateEvent(event.id, changes);
+            close();
+            draw();
+          },
+        },
+        'Save changes',
+      ),
+    ),
+  );
+}
+
+/* ---------- current-mix editor (writes care.observed.substrate_recipe) ---------- */
+
+function openMixSheet(plant, care, draw) {
+  const { close, body } = showSheet({ title: `Current mix — ${plant.name}` });
+  const startFrom =
+    (care.fields.substrate_recipe?.source === 'observed'
+      ? care.fields.substrate_recipe.observed
+      : care.fields.substrate_recipe?.reference) ?? [];
+  const rows = structuredClone(startFrom);
+  const hasOverride = care.fields.substrate_recipe?.source === 'observed';
+
+  const rowsWrap = el('div');
+  const drawRows = () => {
+    rowsWrap.textContent = '';
+    rows.forEach((part, index) => {
+      rowsWrap.appendChild(
+        el(
+          'div',
+          { class: 'field-row', style: 'align-items:center;grid-template-columns:1fr 6rem 44px;margin-bottom:8px' },
+          el('input', {
+            type: 'text',
+            value: part.component ?? '',
+            placeholder: 'Component',
+            'aria-label': `Component ${index + 1}`,
+            oninput: (e) => {
+              part.component = e.target.value;
+            },
+          }),
+          el('input', {
+            type: 'text',
+            value: part.ratio ?? '',
+            placeholder: '60%',
+            'aria-label': `Ratio ${index + 1}`,
+            oninput: (e) => {
+              part.ratio = e.target.value;
+            },
+          }),
+          el(
+            'button',
+            {
+              type: 'button',
+              class: 'btn btn--icon',
+              'aria-label': 'Remove component',
+              onclick: () => {
+                rows.splice(index, 1);
+                drawRows();
+              },
+            },
+            icon('trash'),
+          ),
+        ),
+      );
+    });
+    rowsWrap.appendChild(
+      el(
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn--sm',
+          onclick: () => {
+            rows.push({ component: '', ratio: '' });
+            drawRows();
+          },
+        },
+        icon('plus'),
+        'Add component',
+      ),
+    );
+  };
+  drawRows();
+
+  const actions = el('div', { class: 'sheet__actions' });
+  if (hasOverride) {
+    actions.appendChild(
+      el(
+        'button',
+        {
+          class: 'btn btn--danger',
+          onclick: () => {
+            store.patchPlant(plant.id, {}, [
+              'care.observed.substrate_recipe',
+              'care.observed.substrate_recipe_note',
+            ]);
+            close();
+            draw();
+          },
+        },
+        'Back to ideal only',
+      ),
+    );
+  } else {
+    actions.appendChild(el('button', { class: 'btn', onclick: () => close() }, 'Cancel'));
+  }
+  actions.appendChild(
+    el(
+      'button',
+      {
+        class: 'btn btn--primary',
+        onclick: () => {
+          const cleaned = rows.filter((part) => part.component?.trim());
+          if (cleaned.length) {
+            store.patchPlant(plant.id, { 'care.observed.substrate_recipe': cleaned });
+          } else if (hasOverride) {
+            // Emptying the sheet means "no separate current mix" — remove
+            // the override rather than storing a hollow [].
+            store.patchPlant(plant.id, {}, [
+              'care.observed.substrate_recipe',
+              'care.observed.substrate_recipe_note',
+            ]);
+          }
+          close();
+          draw();
+        },
+      },
+      'Save current mix',
+    ),
+  );
+
+  body.append(
+    el('p', { class: 'small muted' },
+      'What the pot actually holds right now. The ideal recipe (edited in the plant form) stays untouched and drives the repot calculator whenever it exists.'),
+    rowsWrap,
+    actions,
   );
 }

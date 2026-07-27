@@ -59,6 +59,21 @@ describe('applyOp — removeEvent / createPlant', () => {
     assert.equal(applyOp(out, op), out);
   });
 
+  it('updates an event in place, idempotently (fixing the author)', () => {
+    const data = baseData();
+    const op = {
+      type: 'updateEvent',
+      id: 'existing',
+      changes: { author: 'Pepa', note: 'It was me all along' },
+    };
+    const out = applyOp(data, op);
+    assert.equal(out.events[0].author, 'Pepa');
+    assert.equal(out.events[0].note, 'It was me all along');
+    assert.equal(out.events[0].type, 'watering'); // untouched fields survive
+    assert.equal(applyOp(out, op), out); // replay is a no-op
+    assert.equal(applyOp(data, { type: 'updateEvent', id: 'ghost', changes: { author: 'X' } }), data);
+  });
+
   it('creates a plant unless the id already exists', () => {
     const data = baseData();
     const plant = makePlant({ id: 'newbie', name: 'Newbie' });

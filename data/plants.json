@@ -9,6 +9,9 @@
       "orientation": "east",
       "detail": "Next to the window, 1 m from the glass"
     },
+    "pot": {
+      "diameter_cm": 24
+    },
     "photo": "img/living-room-monstera.svg",
     "acquired": "2024-03-15",
     "parent": null,
@@ -57,6 +60,9 @@
       "orientation": "south",
       "detail": "Hanging from the shelf above the counter, out of direct sun"
     },
+    "pot": {
+      "diameter_cm": 15
+    },
     "photo": "img/kitchen-pothos.svg",
     "acquired": "2023-11-02",
     "parent": null,
@@ -96,6 +102,9 @@
       "orientation": "east",
       "detail": "On the dresser, morning light only"
     },
+    "pot": {
+      "diameter_cm": 10
+    },
     "photo": null,
     "acquired": "2026-06-20",
     "parent": "kitchen-pothos",
@@ -134,6 +143,9 @@
       "room": "Bathroom",
       "orientation": "north",
       "detail": "On the shelf by the frosted window — loves the shower steam"
+    },
+    "pot": {
+      "diameter_cm": 14
     },
     "photo": "img/bathroom-calathea.svg",
     "acquired": "2025-04-19",
@@ -181,6 +193,9 @@
       "room": "Studio",
       "orientation": "west",
       "detail": "Floor pot beside the bookshelf, afternoon light"
+    },
+    "pot": {
+      "diameter_cm": 22
     },
     "photo": "img/studio-snake-plant.svg",
     "acquired": "2022-09-30",
@@ -256,5 +271,39 @@
     },
     "general_notes": "Spotted at the little plant shop on Calle Hierbabuena — those zebra stems! Holding off until the monstera corner gets its humidifier, alocasias are famously dramatic about dry air.\n\nReportedly goes fully dormant in winter: do not panic, do not overwater.",
     "status": "wishlist"
+  },
+  {
+    "id": "kitchen-jade-plant",
+    "name": "Kitchen Jade Plant",
+    "species": "Crassula ovata 'Variegata'",
+    "nickname": "Jade",
+    "location": {
+      "room": "Kitchen",
+      "orientation": "",
+      "detail": "Next to the window"
+    },
+    "photo": null,
+    "acquired": "2025-07-27",
+    "parent": null,
+    "care": {
+      "reference": {
+        "source": "https://soltech.com/products/variegated-jade-plant-care",
+        "sun_need": "high",
+        "watering_days_summer": 14,
+        "watering_days_winter": 25,
+        "humidity": "Low",
+        "feeding": "Every 1 or 2 months, spring-autumn; nothing in winter.",
+        "substrate_recipe": [
+          {
+            "component": "Turba",
+            "ratio": "100"
+          }
+        ],
+        "toxic_to_pets": true
+      },
+      "observed": {}
+    },
+    "general_notes": "",
+    "status": "active"
   }
 ]

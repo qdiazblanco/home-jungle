@@ -88,6 +88,22 @@ export function validateData(plants, events, opts = {}) {
       });
     }
 
+    if (plant.pot != null) {
+      const d = plant.pot?.diameter_cm;
+      // pot is optional, so a pot without a usable diameter_cm is always a
+      // hand-edit mistake (wrong key name, array, scalar…).
+      if (
+        typeof plant.pot !== 'object' ||
+        Array.isArray(plant.pot) ||
+        !(Number.isFinite(Number(d)) && Number(d) > 0)
+      ) {
+        issues.push({
+          path: `${where}.pot`,
+          message: `Pot should look like { "diameter_cm": 18 } — got ${JSON.stringify(plant.pot)}.`,
+        });
+      }
+    }
+
     if (plant.acquired != null && !dayOf(plant.acquired)) {
       issues.push({
         path: `${where}.acquired`,

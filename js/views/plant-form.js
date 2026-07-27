@@ -20,6 +20,32 @@ import { uniquePlantId } from '../slug.js';
 
 const ORIENTATIONS = ['', 'north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
 
+// Presets keep entries consistent (and thumbs happy) while the datalist
+// still allows any free text.
+const LIGHT_OPTIONS = [
+  'Direct sun',
+  'Bright indirect',
+  'Bright indirect, tolerates low light',
+  'Medium indirect',
+  'Medium indirect, never direct sun',
+  'Low light',
+];
+const HUMIDITY_OPTIONS = [
+  'High — 60%+',
+  'Medium-high, appreciates misting',
+  'Medium',
+  'Undemanding',
+  'Irrelevant',
+];
+const FEEDING_OPTIONS = [
+  'Biweekly in spring–summer',
+  'Monthly in the growing season',
+  'Monthly at half strength, spring–summer',
+  'Every 2–3 weeks in the growing season',
+  'Twice a year at most',
+  'None',
+];
+
 export function render(container, params, routeName) {
   const editing = routeName === 'plant-edit';
   const { plants, plantsById } = store.getSnapshot();
@@ -44,6 +70,7 @@ export function render(container, params, routeName) {
       species: '',
       nickname: null,
       location: { room: '', orientation: '', detail: '' },
+      pot: null,
       photo: null,
       acquired: todayString(),
       parent: null,
@@ -84,17 +111,6 @@ export function render(container, params, routeName) {
       ...attrs,
     });
 
-  const numberInput = (get, set, attrs = {}) =>
-    el('input', {
-      type: 'number',
-      min: '1',
-      max: '365',
-      inputmode: 'numeric',
-      value: get() ?? '',
-      oninput: (e) => set(e.target.value === '' ? undefined : Number(e.target.value)),
-      ...attrs,
-    });
-
   const selectInput = (options, get, set, labels = null) =>
     el(
       'select',
@@ -107,6 +123,59 @@ export function render(container, params, routeName) {
         ),
       ),
     );
+
+  const presetInput = (listId, options, get, set, attrs = {}) =>
+    el(
+      'span',
+      {},
+      el('input', {
+        type: 'text',
+        list: listId,
+        value: get() ?? '',
+        oninput: (e) => set(e.target.value),
+        ...attrs,
+      }),
+      el('datalist', { id: listId }, options.map((o) => el('option', { value: o }))),
+    );
+
+  // "Water every [n] [days|weeks]" — stored as days; whole weeks display
+  // as weeks (Pepa's request: dropdowns over bare numbers).
+  const wateringInput = (get, set) => {
+    const days = get();
+    let unit = days != null && days % 7 === 0 && days >= 7 ? 'weeks' : 'days';
+    let amount = days == null ? '' : unit === 'weeks' ? days / 7 : days;
+    const commit = () => set(amount === '' ? undefined : Number(amount) * (unit === 'weeks' ? 7 : 1));
+    const amountInput = el('input', {
+      type: 'number',
+      min: '1',
+      max: '365',
+      inputmode: 'numeric',
+      value: amount,
+      'aria-label': 'Every how many',
+      oninput: (e) => {
+        amount = e.target.value;
+        commit();
+      },
+    });
+    const unitSelect = el(
+      'select',
+      {
+        'aria-label': 'Days or weeks',
+        onchange: (e) => {
+          unit = e.target.value;
+          commit();
+        },
+      },
+      el('option', { value: 'days', selected: unit === 'days' }, 'days'),
+      el('option', { value: 'weeks', selected: unit === 'weeks' }, 'weeks'),
+    );
+    return el(
+      'span',
+      { style: 'display:grid;grid-template-columns:1fr 1fr;gap:8px' },
+      amountInput,
+      unitSelect,
+    );
+  };
 
   /* ---------- id slug ---------- */
 
@@ -238,13 +307,24 @@ export function render(container, params, routeName) {
         (v) => { (state.location ??= {}).detail = v; },
         { placeholder: 'Next to the window, 1 m from the glass' },
       )),
+      field('Pot diameter (cm)', el('input', {
+        type: 'number',
+        min: '4',
+        max: '80',
+        inputmode: 'numeric',
+        value: state.pot?.diameter_cm ?? '',
+        oninput: (e) => {
+          const v = Number(e.target.value);
+          state.pot = e.target.value !== '' && Number.isFinite(v) && v > 0 ? { diameter_cm: v } : null;
+        },
+      }), 'Top inner diameter — unlocks the repotting calculator on the profile.'),
     ),
 
     el('h2', {}, 'Care — from the literature'),
     el('p', { class: 'small muted' },
       'What the books/internet say. What actually works in our house is recorded later as observed overrides on the profile.'),
     el('div', { class: 'card' },
-      field('Light', textInput(
+      field('Light', presetInput('light-list', LIGHT_OPTIONS,
         () => state.care.reference.light,
         (v) => { state.care.reference.light = v; },
         { placeholder: 'Bright indirect' },
@@ -252,18 +332,16 @@ export function render(container, params, routeName) {
       field('Sun need', selectInput(SUN_NEEDS,
         () => state.care.reference.sun_need,
         (v) => { state.care.reference.sun_need = v; })),
-      el('div', { class: 'field-row' },
-        field('Watering · summer (days)', numberInput(
-          () => state.care.reference.watering_days_summer,
-          (v) => { state.care.reference.watering_days_summer = v; })),
-        field('Watering · winter (days)', numberInput(
-          () => state.care.reference.watering_days_winter,
-          (v) => { state.care.reference.watering_days_winter = v; })),
-      ),
-      field('Humidity', textInput(
+      field('Watering · summer — every', wateringInput(
+        () => state.care.reference.watering_days_summer,
+        (v) => { state.care.reference.watering_days_summer = v; })),
+      field('Watering · winter — every', wateringInput(
+        () => state.care.reference.watering_days_winter,
+        (v) => { state.care.reference.watering_days_winter = v; })),
+      field('Humidity', presetInput('humidity-list', HUMIDITY_OPTIONS,
         () => state.care.reference.humidity,
         (v) => { state.care.reference.humidity = v; })),
-      field('Feeding', textInput(
+      field('Feeding', presetInput('feeding-list', FEEDING_OPTIONS,
         () => state.care.reference.feeding,
         (v) => { state.care.reference.feeding = v; },
         { placeholder: 'Biweekly in spring–summer' },
@@ -317,6 +395,7 @@ export function render(container, params, routeName) {
     for (const [key, value] of Object.entries(state.care.reference)) {
       if (value === '' || value === undefined) delete state.care.reference[key];
     }
+    if (state.pot == null) delete state.pot;
 
     if (editing) {
       const { changes, removals } = diffPlant(base, state);
