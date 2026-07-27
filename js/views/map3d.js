@@ -12,7 +12,7 @@ const WALL_H = 1.6; // wall height in grid units
 const roomKey = (name) => String(name ?? '').trim().toLowerCase();
 
 // Session-persistent camera (module-level, like the map's other view state).
-const orbit = { yaw: -28, tilt: 56 };
+const orbit = { yaw: -28, tilt: 56, zoom: 1 };
 
 const WINDOW_SPOTS = {
   north: ['n', 0.5],
@@ -78,7 +78,7 @@ export function render3D(host, { gridW, gridH, rooms, model, statusOf, plantSpri
 
   const apply = () => {
     if (!scene) return;
-    scene.style.transform = `rotateX(${orbit.tilt}deg) rotateZ(${orbit.yaw}deg)`;
+    scene.style.transform = `scale(${orbit.zoom}) rotateX(${orbit.tilt}deg) rotateZ(${orbit.yaw}deg)`;
     const face = `rotateZ(${-orbit.yaw}deg) rotateX(${-orbit.tilt}deg)`;
     for (const sprite of billboards) {
       sprite.style.transform = `${face} translate(-50%, -100%)`;
@@ -253,46 +253,110 @@ export function render3D(host, { gridW, gridH, rooms, model, statusOf, plantSpri
     }
 
     stage.appendChild(scene);
+    stage.appendChild(makeZoomUi());
     apply();
   };
 
-  /* drag to orbit — one pointer at a time, others ignored */
-  let activePointer = null;
+  /* orbit (one finger / mouse), pinch (two fingers) and wheel zoom */
+  const setZoom = (zoom) => {
+    orbit.zoom = Math.min(2.2, Math.max(0.6, zoom));
+    apply();
+  };
+
+  const pointers = new Map(); // pointerId -> {x, y}
+  let gesture = null; // {kind:'orbit', ...} | {kind:'pinch', ...}
+
+  const pinchDistance = () => {
+    const [a, b] = [...pointers.values()];
+    return Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+  };
+
+  // (Re)baseline from the current pointer set — also called when a finger
+  // lifts, so the survivor keeps orbiting from where things stand now.
+  const beginGesture = () => {
+    if (pointers.size === 1) {
+      const [p] = pointers.values();
+      gesture = {
+        kind: 'orbit',
+        startX: p.x,
+        startY: p.y,
+        startYaw: orbit.yaw,
+        startTilt: orbit.tilt,
+      };
+    } else if (pointers.size >= 2) {
+      gesture = { kind: 'pinch', startDist: pinchDistance(), startZoom: orbit.zoom };
+    } else {
+      gesture = null;
+    }
+  };
+
   stage.addEventListener('pointerdown', (event) => {
-    if (activePointer !== null) return;
-    if (event.target.closest('.d3-plant, .bp-tip')) return;
+    if (event.target.closest('.d3-plant, .bp-tip, .d3-zoom')) return;
     event.preventDefault();
-    activePointer = event.pointerId;
     try {
       stage.setPointerCapture(event.pointerId);
     } catch {
       /* best-effort */
     }
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const startYaw = orbit.yaw;
-    const startTilt = orbit.tilt;
-    const up = (ev) => {
-      if (ev && ev.pointerId !== activePointer) return;
-      activePointer = null;
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      window.removeEventListener('pointercancel', up);
-    };
-    const move = (ev) => {
-      if (ev.pointerId !== activePointer) return;
-      if (ev.buttons === 0) return up();
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    beginGesture();
+  });
+
+  stage.addEventListener('pointermove', (event) => {
+    if (!pointers.has(event.pointerId)) return;
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (!gesture) return;
+    if (gesture.kind === 'orbit') {
+      if (event.pointerType === 'mouse' && event.buttons === 0) {
+        // missed pointerup (window lost focus mid-drag)
+        pointers.delete(event.pointerId);
+        beginGesture();
+        return;
+      }
       // yaw stays continuous (no wrapping): the compass needle transitions,
       // and a ±360° jump would spin it a full backwards turn. Negative dx
       // factor = "grab the house": drag right, house turns right.
-      orbit.yaw = startYaw - (ev.clientX - startX) * 0.4;
-      orbit.tilt = Math.min(78, Math.max(25, startTilt - (ev.clientY - startY) * 0.25));
+      orbit.yaw = gesture.startYaw - (event.clientX - gesture.startX) * 0.4;
+      orbit.tilt = Math.min(78, Math.max(25, gesture.startTilt - (event.clientY - gesture.startY) * 0.25));
       apply();
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
+    } else if (gesture.kind === 'pinch' && pointers.size >= 2) {
+      setZoom(gesture.startZoom * (pinchDistance() / gesture.startDist));
+    }
   });
+
+  const releasePointer = (event) => {
+    if (!pointers.delete(event.pointerId)) return;
+    beginGesture();
+  };
+  stage.addEventListener('pointerup', releasePointer);
+  stage.addEventListener('pointercancel', releasePointer);
+
+  stage.addEventListener(
+    'wheel',
+    (event) => {
+      event.preventDefault(); // the stage owns the scroll gesture
+      setZoom(orbit.zoom * Math.exp(-event.deltaY * 0.0012));
+    },
+    { passive: false },
+  );
+
+  /* zoom buttons (discoverable + keyboard-friendly); recreated per build
+     since build() clears the stage */
+  const makeZoomUi = () =>
+    el(
+      'div',
+      { class: 'd3-zoom' },
+      el(
+        'button',
+        { class: 'btn btn--icon btn--sm', 'aria-label': 'Zoom in', onclick: () => setZoom(orbit.zoom * 1.25) },
+        '+',
+      ),
+      el(
+        'button',
+        { class: 'btn btn--icon btn--sm', 'aria-label': 'Zoom out', onclick: () => setZoom(orbit.zoom / 1.25) },
+        '−',
+      ),
+    );
 
   /* build now and on real size changes (rotation, resize) */
   if (typeof ResizeObserver !== 'undefined') {

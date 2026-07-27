@@ -370,7 +370,7 @@ function drawContent(root, draw) {
         'p',
         { class: 'small muted' },
         viewMode === '3d'
-          ? 'Drag to turn the house. Hover a plant (or tap once) for its card; open it from there or with a second tap.'
+          ? 'Drag to turn the house; pinch, scroll or use the +/− buttons to zoom. Hover a plant (or tap once) for its card; open it from there or with a second tap.'
           : 'Hover a plant (or tap once) for its card; open it from there or with a second tap. Windows are drawn from each plant’s recorded orientation.',
       ),
     );
