@@ -40,15 +40,24 @@ const EVENT_ICONS = {
   photo: 'photo',
 };
 
-const CARE_ROWS = [
-  ['light', 'Light'],
-  ['sun_need', 'Sun need'],
-  ['watering_days_summer', 'Watering · summer'],
-  ['watering_days_winter', 'Watering · winter'],
-  ['humidity', 'Humidity'],
-  ['feeding', 'Feeding'],
-  ['toxic_to_pets', 'Toxic to pets'],
-];
+/** Care rows; legacy single 'feeding' shows only when no seasonal split exists. */
+function careRowsFor(fields) {
+  const seasonalFeeding = fields.feeding_summer || fields.feeding_winter;
+  return [
+    ['light', 'Light'],
+    ['sun_need', 'Sun need'],
+    ['watering_days_summer', 'Watering · summer'],
+    ['watering_days_winter', 'Watering · winter'],
+    ['humidity', 'Humidity'],
+    ...(seasonalFeeding
+      ? [
+          ['feeding_summer', 'Feeding · summer'],
+          ['feeding_winter', 'Feeding · winter'],
+        ]
+      : [['feeding', 'Feeding']]),
+    ['toxic_to_pets', 'Toxic to pets'],
+  ];
+}
 
 export function render(container, params) {
   const root = el('div');
@@ -216,7 +225,7 @@ function drawContent(root, id, draw) {
   root.appendChild(el('div', { class: 'section-title' }, el('h2', {}, 'Care')));
   const careCard = el('div', { class: 'card' });
 
-  for (const [key, label] of CARE_ROWS) {
+  for (const [key, label] of careRowsFor(care.fields)) {
     const field = care.fields[key];
     if (!field || (field.value === undefined && field.reference === undefined)) continue;
     const overridden = field.source === 'observed';

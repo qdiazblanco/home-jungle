@@ -35,6 +35,8 @@ export const CARE_PARAMS = [
   'watering_days_winter',
   'humidity',
   'feeding',
+  'feeding_summer',
+  'feeding_winter',
   'substrate_recipe',
   'toxic_to_pets',
 ];

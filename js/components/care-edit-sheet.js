@@ -15,7 +15,8 @@ export const QUICK_PARAMS = {
   sun_need: { label: 'Sun need', kind: 'enum', options: SUN_NEEDS },
   light: { label: 'Light', kind: 'text' },
   humidity: { label: 'Humidity', kind: 'text' },
-  feeding: { label: 'Feeding', kind: 'text' },
+  feeding_summer: { label: 'Feeding — summer', kind: 'text' },
+  feeding_winter: { label: 'Feeding — winter', kind: 'text' },
   toxic_to_pets: { label: 'Toxic to pets', kind: 'bool' },
 };
 
