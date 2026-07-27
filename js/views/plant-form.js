@@ -307,17 +307,42 @@ export function render(container, params, routeName) {
         (v) => { (state.location ??= {}).detail = v; },
         { placeholder: 'Next to the window, 1 m from the glass' },
       )),
-      field('Pot diameter (cm)', el('input', {
-        type: 'number',
-        min: '4',
-        max: '80',
-        inputmode: 'numeric',
-        value: state.pot?.diameter_cm ?? '',
-        oninput: (e) => {
-          const v = Number(e.target.value);
-          state.pot = e.target.value !== '' && Number.isFinite(v) && v > 0 ? { diameter_cm: v } : null;
-        },
-      }), 'Top inner diameter — unlocks the repotting calculator on the profile.'),
+      el('div', { class: 'field-row' },
+        field('Pot Ø top (cm)', el('input', {
+          type: 'number',
+          min: '4',
+          max: '80',
+          inputmode: 'numeric',
+          value: state.pot?.diameter_cm ?? '',
+          oninput: (e) => {
+            const v = Number(e.target.value);
+            if (e.target.value !== '' && Number.isFinite(v) && v > 0) {
+              (state.pot ??= {}).diameter_cm = v;
+            } else if (state.pot) {
+              delete state.pot.diameter_cm;
+              if (!Object.keys(state.pot).length) state.pot = null;
+            }
+          },
+        })),
+        field('Ø base (optional)', el('input', {
+          type: 'number',
+          min: '3',
+          max: '80',
+          inputmode: 'numeric',
+          value: state.pot?.base_diameter_cm ?? '',
+          oninput: (e) => {
+            const v = Number(e.target.value);
+            if (e.target.value !== '' && Number.isFinite(v) && v > 0) {
+              (state.pot ??= {}).base_diameter_cm = v;
+            } else if (state.pot) {
+              delete state.pot.base_diameter_cm;
+              if (!Object.keys(state.pot).length) state.pot = null;
+            }
+          },
+        })),
+      ),
+      el('p', { class: 'hint', style: 'margin-top:-0.5rem' },
+        'Inner diameters. Pots taper — the base makes the repot calculator exact (otherwise it assumes 70%). Top Ø unlocks the calculator.'),
     ),
 
     el('h2', {}, 'Care — from the literature'),

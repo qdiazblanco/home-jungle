@@ -130,7 +130,10 @@ function drawContent(root, id, draw) {
   }
   if (plant.acquired) facts.push(`with us since ${fmtDay(plant.acquired, { withYear: 'always' })}`);
   const potDiameter = Number(plant.pot?.diameter_cm) || null;
-  if (potDiameter) facts.push(`${potDiameter} cm pot`);
+  const potBase = Number(plant.pot?.base_diameter_cm) || null;
+  if (potDiameter) {
+    facts.push(potBase ? `${potDiameter} cm pot (${potBase} cm at the base)` : `${potDiameter} cm pot`);
+  }
   if (plant.status === 'active') {
     const lastRepot = lastEventOfType(events, plant.id, 'repotting', today);
     facts.push(
@@ -343,7 +346,7 @@ function drawContent(root, id, draw) {
 
     /* ---------- repotting calculator ---------- */
     if (plant.status === 'active') {
-      const plan = potDiameter ? repotPlan(potDiameter, idealMix?.length ? idealMix : effectiveMix) : null;
+      const plan = potDiameter ? repotPlan(plant.pot, idealMix?.length ? idealMix : effectiveMix) : null;
       if (plan) {
         root.appendChild(
           el(
@@ -352,8 +355,17 @@ function drawContent(root, id, draw) {
             el('p', { class: 'small', style: 'margin-bottom:4px' },
               el('strong', {}, 'Next repot (calculator)')),
             el('div', { class: 'care-param' },
-              el('span', { class: 'care-param__label' }, 'Suggested next pot'),
-              el('strong', { class: 'num' }, `${plan.nextDiameter} cm (~${plan.nextVolumeLiters} L)`)),
+              el('span', { class: 'care-param__label' }, 'Current pot'),
+              el('span', { class: 'num' },
+                `${plan.current.diameter} cm · ~${plan.current.volumeLiters} L`)),
+            el('div', { class: 'care-param' },
+              el('span', { class: 'care-param__label' }, 'Suggested next'),
+              el('strong', { class: 'num' },
+                `${plan.next.diameter} cm · ~${plan.next.volumeLiters} L`)),
+            el('div', { class: 'care-param' },
+              el('span', { class: 'care-param__label' }, 'Step up'),
+              el('strong', { class: 'num state-chip state-chip--fine' },
+                `+${plan.next.diameter - plan.current.diameter} cm · +${plan.deltaLiters} L (+${plan.deltaPercent}%)`)),
             el('div', { class: 'care-param' },
               el('span', { class: 'care-param__label' }, 'Substrate to prepare'),
               el('strong', { class: 'num' }, `~${plan.substrateLiters} L`)),
@@ -362,7 +374,7 @@ function drawContent(root, id, draw) {
                 el('span', {}, part.component),
                 el('span', { class: 'num' }, `~${part.liters} L`))),
             el('p', { class: 'small muted', style: 'margin:0.5rem 0 0' },
-              'Assumes a standard round pot and the root ball moving along; the split follows the ideal recipe when one is set, otherwise the mix above.'),
+              `Tapered-pot volumes${potBase ? '' : ' (base assumed 70% of the top)'}, root ball moving along; the split follows the ideal recipe when one is set, otherwise the mix above.`),
           ),
         );
       } else if (canEdit) {
