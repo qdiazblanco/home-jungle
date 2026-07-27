@@ -12,7 +12,7 @@
 
 import * as store from '../store.js';
 import { el, icon, clear, formField } from '../ui.js';
-import { PLANT_STATUSES, SUN_NEEDS } from '../../shared/validate.js';
+import { PLANT_STATUSES, SUN_NEEDS, PLANT_ICONS } from '../../shared/validate.js';
 import { todayString } from '../../shared/dates.js';
 import { diffPlant } from '../../shared/ops.js';
 import { navigate } from '../router.js';
@@ -295,6 +295,15 @@ export function render(container, params, routeName) {
       )),
       field('Photo path', textInput(() => state.photo, (v) => { state.photo = v || null; }),
         'e.g. img/my-plant.jpg — add the image file to the repo by hand (see README).'),
+      field('Map icon', selectInput(
+        PLANT_ICONS,
+        () => state.icon ?? 'pot',
+        (v) => {
+          if (v === 'pot') delete state.icon;
+          else state.icon = v;
+        },
+        ['Potted (default)', 'Bushy', 'Small tree', 'Cactus / upright', 'Hanging'],
+      ), 'The silhouette shown on the house map.'),
     ),
 
     el('h2', {}, 'Where it lives'),
@@ -435,6 +444,7 @@ export function render(container, params, routeName) {
       if (value === '' || value === undefined) delete state.care.reference[key];
     }
     if (state.pot == null) delete state.pot;
+    if (state.icon == null) delete state.icon;
 
     if (editing) {
       const { changes, removals } = diffPlant(base, state);

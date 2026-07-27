@@ -67,7 +67,7 @@ function wallPieces(len, spans) {
  *   onYaw } — plantSprite(plant, status) builds the billboard's inner
  *   element (with its own tip/click behavior); onYaw(deg) feeds the compass.
  */
-export function render3D(host, { gridW, gridH, rooms, byRoom, statusOf, plantSprite, onYaw }) {
+export function render3D(host, { gridW, gridH, rooms, model, statusOf, plantSprite, onYaw }) {
   host.textContent = '';
   const stage = el('div', { class: 'd3-stage' });
   host.appendChild(stage);
@@ -155,8 +155,8 @@ export function render3D(host, { gridW, gridH, rooms, byRoom, statusOf, plantSpr
         }
       }
 
-      /* plants as billboards (same capacity rules as the plan view) */
-      const roomPlants = room.plants ?? [];
+      /* floor plants as billboards (same capacity rules as the plan view) */
+      const roomPlants = model?.floorByRoom.get(roomKey(room.name)) ?? [];
       const pad = 0.9;
       const step = 1.9;
       const cols = Math.max(1, Math.floor((room.w - pad * 2) / step));
@@ -196,6 +196,48 @@ export function render3D(host, { gridW, gridH, rooms, byRoom, statusOf, plantSpr
       const nudgeX = piece.side.wall === 'w' ? 0.5 : piece.side.wall === 'e' ? -0.5 : 0;
       const nudgeY = piece.side.wall === 'n' ? 0.5 : piece.side.wall === 's' ? -0.5 : 0;
       scene.appendChild(wallDiv(piece.side, piece.from, piece.len, true, px, nudgeX, nudgeY));
+    }
+
+    /* furniture: simple extruded boxes, plants standing on their tops */
+    for (const piece of model?.furniture ?? []) {
+      const { absX, absY, w, h, spec } = piece;
+      const kindClass = `d3-furn--${piece.kind}`;
+      const sides = [
+        { dir: 'h', x: absX, y: absY, len: w },
+        { dir: 'h', x: absX, y: absY + h, len: w },
+        { dir: 'v', x: absX, y: absY, len: h },
+        { dir: 'v', x: absX + w, y: absY, len: h },
+      ];
+      for (const side of sides) {
+        const style =
+          side.dir === 'h'
+            ? `left:${px(side.x)}px; top:${px(side.y)}px; width:${px(side.len)}px; height:${px(spec.z)}px; transform: rotateX(90deg);`
+            : `left:${px(side.x)}px; top:${px(side.y)}px; width:${px(side.len)}px; height:${px(spec.z)}px; transform: rotateZ(90deg) rotateX(90deg);`;
+        scene.appendChild(el('div', { class: `d3-furn__side ${kindClass}`, style }));
+      }
+      scene.appendChild(
+        el('div', {
+          class: `d3-furn__top ${kindClass}`,
+          style: `left:${px(absX)}px; top:${px(absY)}px; width:${px(w)}px; height:${px(h)}px; transform: translateZ(${px(spec.z)}px);`,
+        }),
+      );
+
+      const plantsOn = model?.onFurniture.get(piece.id) ?? [];
+      const spread = Math.max(1, Math.floor(w / 1.1));
+      plantsOn.forEach((plant, index) => {
+        const cx = Math.min(absX + 0.6 + (index % spread) * 1.1, absX + w - 0.5);
+        const cy = absY + h / 2;
+        const anchor = el('div', {
+          class: 'd3-plant-anchor',
+          style: `left:${px(cx)}px; top:${px(cy)}px; transform: translateZ(${px(spec.z)}px);`,
+        });
+        const sprite = plantSprite(plant, statusOf(plant));
+        sprite.classList.add('d3-plant');
+        sprite.style.width = `${Math.max(22, unit * 1.5)}px`;
+        anchor.appendChild(sprite);
+        scene.appendChild(anchor);
+        billboards.push(sprite);
+      });
     }
 
     stage.appendChild(scene);

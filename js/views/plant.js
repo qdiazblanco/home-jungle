@@ -27,6 +27,7 @@ import { uniquePlantId } from '../slug.js';
 import { navigate } from '../router.js';
 import { openCareEdit, QUICK_PARAMS } from '../components/care-edit-sheet.js';
 import { openEventDialog } from '../components/event-dialog.js';
+import { FURNITURE_KINDS } from './map.js';
 
 const EVENT_ICONS = {
   watering: 'water',
@@ -143,6 +144,22 @@ function drawContent(root, id, draw) {
   if (potDiameter) {
     facts.push(potBase ? `${potDiameter} cm pot (${potBase} cm at the base)` : `${potDiameter} cm pot`);
   }
+
+  /* spot in the house (furniture placement, lives in house.json) */
+  const { house } = store.getSnapshot();
+  const plantRoomKey = String(plant.location?.room ?? '').trim().toLowerCase();
+  const houseRoom = (house.rooms ?? []).find(
+    (room) => String(room.name ?? '').trim().toLowerCase() === plantRoomKey,
+  );
+  const roomFurniture = houseRoom
+    ? (house.furniture ?? []).filter(
+        (piece) => piece.roomId === houseRoom.id && FURNITURE_KINDS[piece.kind],
+      )
+    : [];
+  const placedOn = roomFurniture.find((piece) => piece.id === house.placements?.[plant.id]);
+  if (placedOn) {
+    facts.push(`on the ${FURNITURE_KINDS[placedOn.kind].label.toLowerCase()} (house map)`);
+  }
   if (plant.status === 'active') {
     const lastRepot = lastEventOfType(events, plant.id, 'repotting', today);
     facts.push(
@@ -159,6 +176,18 @@ function drawContent(root, id, draw) {
       'div',
       { class: 'card' },
       facts.map((f) => el('p', { class: 'small', style: 'margin-bottom:4px' }, f)),
+      canEdit && plant.status === 'active' && roomFurniture.length
+        ? el(
+            'button',
+            {
+              class: 'btn btn--sm',
+              style: 'margin-top: 4px',
+              onclick: () => openSpotSheet(plant, house, roomFurniture, placedOn, draw),
+            },
+            icon('mapIcon'),
+            placedOn ? 'Move its spot' : 'Place on furniture',
+          )
+        : null,
     ),
   );
 
@@ -872,5 +901,44 @@ function openMixSheet(plant, care, draw) {
       'What the pot actually holds right now. The ideal recipe (edited in the plant form) stays untouched and drives the repot calculator whenever it exists.'),
     rowsWrap,
     actions,
+  );
+}
+
+/* ---------- spot in the house (writes house.json placements) ---------- */
+
+function openSpotSheet(plant, house, roomFurniture, placedOn, draw) {
+  const { close, body } = showSheet({ title: `Spot — ${plant.name}` });
+
+  const choose = (furnitureId) => {
+    const placements = { ...(house.placements ?? {}) };
+    if (furnitureId) placements[plant.id] = furnitureId;
+    else delete placements[plant.id];
+    store.setHouse({ ...house, placements });
+    close();
+    draw();
+  };
+
+  const option = (label, active, onPick) =>
+    el(
+      'button',
+      {
+        class: `btn${active ? ' btn--primary' : ''}`,
+        style: 'width:100%;justify-content:flex-start;margin-bottom:8px',
+        onclick: onPick,
+      },
+      label,
+    );
+
+  body.append(
+    el('p', { class: 'small muted' },
+      'Where this plant stands on the house map. Furniture is drawn in the map’s floor-plan editor.'),
+    option('On the floor', !placedOn, () => choose(null)),
+    roomFurniture.map((piece) =>
+      option(
+        FURNITURE_KINDS[piece.kind].label,
+        placedOn?.id === piece.id,
+        () => choose(piece.id),
+      ),
+    ),
   );
 }

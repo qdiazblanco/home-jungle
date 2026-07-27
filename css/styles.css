@@ -1471,6 +1471,24 @@ code {
   pointer-events: none;
 }
 
+/* furniture (plan view) */
+
+.bp-furn {
+  stroke: rgba(43, 51, 42, 0.4);
+  stroke-width: 0.08;
+}
+
+.bp-furn--table { fill: #cfa878; }
+.bp-furn--shelf { fill: #b98f60; }
+.bp-furn--stand { fill: #a9805a; }
+.bp-furn--windowsill { fill: #e7e0cd; }
+
+.bp--editing .bp-furn {
+  cursor: grab;
+  stroke: var(--leaf-deep);
+  stroke-dasharray: 0.25 0.18;
+}
+
 /* potted-plant glyphs */
 
 .bp-plant {
@@ -1644,6 +1662,38 @@ code {
   border-right: 1.5px solid #8fa6b4;
   border-top-color: rgba(43, 51, 42, 0.45);
 }
+
+/* furniture (dollhouse) */
+
+.d3-furn__side {
+  transform-origin: 0 0;
+  backface-visibility: visible;
+  box-sizing: border-box;
+  border-top: 1px solid rgba(43, 51, 42, 0.35);
+}
+
+.d3-furn__top {
+  box-sizing: border-box;
+  box-shadow: inset 0 0 0 1px rgba(43, 51, 42, 0.25);
+}
+
+.d3-furn--table.d3-furn__side { background: #b98f60; }
+.d3-furn--table.d3-furn__top { background: #cfa878; }
+.d3-furn--shelf.d3-furn__side {
+  background: repeating-linear-gradient(
+    to bottom,
+    #b98f60 0 26%,
+    rgba(43, 51, 42, 0.35) 26% 30%,
+    #a9805a 30% 56%,
+    rgba(43, 51, 42, 0.35) 56% 60%,
+    #b98f60 60% 100%
+  );
+}
+.d3-furn--shelf.d3-furn__top { background: #cfa878; }
+.d3-furn--stand.d3-furn__side { background: #96714d; }
+.d3-furn--stand.d3-furn__top { background: #a9805a; }
+.d3-furn--windowsill.d3-furn__side { background: #ddd5bf; }
+.d3-furn--windowsill.d3-furn__top { background: #e7e0cd; }
 
 .d3-plant-anchor {
   width: 0;

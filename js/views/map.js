@@ -39,6 +39,108 @@ const roomKey = (name) => String(name ?? '').trim().toLowerCase();
 
 const MIN_ROOM = 3;
 
+/** Furniture catalogue: fixed footprints, top height in grid units. */
+export const FURNITURE_KINDS = {
+  table: { label: 'Table', w: 3, h: 2, z: 1.0 },
+  shelf: { label: 'Shelf', w: 3, h: 1, z: 1.9 },
+  stand: { label: 'Plant stand', w: 1.2, h: 1.2, z: 0.75 },
+  windowsill: { label: 'Windowsill', w: 2.4, h: 0.7, z: 0.95 },
+};
+
+/**
+ * Resolves the layout into renderable furniture and plant spots:
+ * furniture pieces with absolute coords + the plants placed on each, and
+ * the remaining floor plants per room key.
+ */
+function furnitureModel(layout, byRoom) {
+  const rooms = layout?.rooms ?? [];
+  const roomsById = new Map(rooms.map((room) => [room.id, room]));
+  const placements =
+    layout?.placements && typeof layout.placements === 'object' ? layout.placements : {};
+
+  const furniture = (Array.isArray(layout?.furniture) ? layout.furniture : []).flatMap((piece) => {
+    const room = roomsById.get(piece.roomId);
+    const spec = FURNITURE_KINDS[piece.kind];
+    if (!room || !spec || !Number.isFinite(piece.x) || !Number.isFinite(piece.y)) return [];
+    const w = Number(piece.w) || spec.w;
+    const h = Number(piece.h) || spec.h;
+    return [{ ...piece, w, h, spec, room, absX: room.x + piece.x, absY: room.y + piece.y }];
+  });
+  const furnitureById = new Map(furniture.map((piece) => [piece.id, piece]));
+
+  const onFurniture = new Map(); // furnitureId -> plants
+  const floorByRoom = new Map(); // room key -> plants
+  for (const [key, plants] of byRoom) {
+    for (const plant of plants) {
+      const spot = furnitureById.get(placements[plant.id]);
+      if (spot && roomKey(spot.room.name) === key) {
+        if (!onFurniture.has(spot.id)) onFurniture.set(spot.id, []);
+        onFurniture.get(spot.id).push(plant);
+      } else {
+        if (!floorByRoom.has(key)) floorByRoom.set(key, []);
+        floorByRoom.get(key).push(plant);
+      }
+    }
+  }
+  return { furniture, furnitureById, onFurniture, floorByRoom };
+}
+
+/** Plant silhouette markup for a 24×30 viewBox, foliage tinted by urgency. */
+export function iconMarkup(state, iconKind) {
+  const leaf = (extra) => `class="bp-dot--${state}" stroke="rgba(43,51,42,0.25)" stroke-width="0.6" ${extra}`;
+  const potBase =
+    `<ellipse cx="12" cy="27.4" rx="7" ry="1.8" fill="rgba(43,51,42,0.2)"/>` +
+    `<path d="M6.5 16.5 L17.5 16.5 L15.8 24 L8.2 24 Z" fill="var(--terracotta)"/>` +
+    `<rect x="5.4" y="15" width="13.2" height="2.4" rx="0.8" fill="#b5654a"/>`;
+  switch (iconKind) {
+    case 'bushy':
+      return (
+        potBase +
+        `<circle ${leaf('cx="6.8" cy="12.2" r="3.4"')}/>` +
+        `<circle ${leaf('cx="17.2" cy="12.2" r="3.4"')}/>` +
+        `<circle ${leaf('cx="9.2" cy="7.8" r="3.6"')}/>` +
+        `<circle ${leaf('cx="14.8" cy="7.8" r="3.6"')}/>` +
+        `<circle ${leaf('cx="12" cy="12" r="3.8"')}/>`
+      );
+    case 'tree':
+      return (
+        potBase +
+        `<rect x="11" y="8" width="2" height="8" rx="1" fill="#7a5a3a"/>` +
+        `<circle ${leaf('cx="12" cy="6.4" r="5.6"')}/>`
+      );
+    case 'cactus':
+      return (
+        potBase +
+        `<rect ${leaf('x="9.4" y="4.5" width="5.2" height="11.5" rx="2.6"')}/>` +
+        `<rect ${leaf('x="4.8" y="7.5" width="3.4" height="6" rx="1.7"')}/>` +
+        `<rect ${leaf('x="15.8" y="9" width="3.4" height="5" rx="1.7"')}/>`
+      );
+    case 'hanging':
+      return (
+        `<ellipse cx="12" cy="27.4" rx="7" ry="1.8" fill="rgba(43,51,42,0.2)"/>` +
+        `<path d="M7 8.5 L17 8.5 L15.6 14.5 L8.4 14.5 Z" fill="var(--terracotta)"/>` +
+        `<rect x="6" y="7.2" width="12" height="2.2" rx="0.8" fill="#b5654a"/>` +
+        `<path d="M8 14.5 C7 19 7.5 23 6.5 26" fill="none" stroke="var(--leaf-deep)" stroke-width="0.9"/>` +
+        `<path d="M12 14.5 C12 20 11.5 24 12.5 27" fill="none" stroke="var(--leaf-deep)" stroke-width="0.9"/>` +
+        `<path d="M16 14.5 C17 19 16.5 23 17.5 25" fill="none" stroke="var(--leaf-deep)" stroke-width="0.9"/>` +
+        `<circle ${leaf('cx="6.6" cy="19" r="1.7"')}/>` +
+        `<circle ${leaf('cx="12.2" cy="21" r="1.7"')}/>` +
+        `<circle ${leaf('cx="16.8" cy="18" r="1.7"')}/>` +
+        `<circle ${leaf('cx="7" cy="24.5" r="1.7"')}/>` +
+        `<circle ${leaf('cx="17.2" cy="23" r="1.7"')}/>` +
+        `<circle ${leaf('cx="10" cy="6.2" r="2.4"')}/>` +
+        `<circle ${leaf('cx="14" cy="6.2" r="2.4"')}/>`
+      );
+    default: // 'pot'
+      return (
+        potBase +
+        `<circle ${leaf('cx="7.6" cy="10.6" r="4.4"')}/>` +
+        `<circle ${leaf('cx="16.4" cy="10.6" r="4.4"')}/>` +
+        `<circle ${leaf('cx="12" cy="5.6" r="4.9"')}/>`
+      );
+  }
+}
+
 const MODE_KEY = 'digital-garden:map-view';
 
 // 'plan' (schematic, editable) | '3d' (dollhouse). Device-local preference.
@@ -116,6 +218,7 @@ function drawContent(root, draw) {
     byRoom.get(key).push(plant);
   }
   const placedKeys = new Set(rooms.map((room) => roomKey(room.name)));
+  const model = furnitureModel(layout, byRoom);
 
   /* ---- header: view toggle + edit ---- */
   const setMode = (mode) => {
@@ -180,7 +283,7 @@ function drawContent(root, draw) {
       gridW,
       gridH,
       rooms: dollhouseRooms(rooms, byRoom, toneFor),
-      byRoom,
+      model,
       statusOf,
       plantSprite: (plant, status) => makeSprite(plant, status),
       onYaw: (yaw) => {
@@ -188,7 +291,7 @@ function drawContent(root, draw) {
       },
     });
   } else {
-    boardCard.appendChild(renderBlueprint({ gridW, gridH, rooms, byRoom, statusOf }));
+    boardCard.appendChild(renderBlueprint({ gridW, gridH, rooms, model, statusOf }));
   }
 
   // Compass as an HTML overlay: never clipped, and it turns with the house.
@@ -280,7 +383,7 @@ function toneFor(id) {
   return FLOOR_TONES[Math.abs(hash) % FLOOR_TONES.length];
 }
 
-function renderBlueprint({ gridW, gridH, rooms, byRoom, statusOf }) {
+function renderBlueprint({ gridW, gridH, rooms, model, statusOf }) {
   const board = svg('svg', {
     class: `bp${editor ? ' bp--editing' : ''}`,
     viewBox: `-0.5 -0.5 ${gridW + 1} ${gridH + 1}`,
@@ -319,7 +422,7 @@ function renderBlueprint({ gridW, gridH, rooms, byRoom, statusOf }) {
   // stroke must not paint over an earlier room's window on a shared wall.
   const windowLayer = svg('g', { class: 'bp-windows' });
   for (const room of rooms) {
-    board.appendChild(renderRoom(board, room, { gridW, gridH, byRoom, statusOf, windowLayer }));
+    board.appendChild(renderRoom(board, room, { gridW, gridH, model, statusOf, windowLayer }));
   }
   board.appendChild(windowLayer);
 
@@ -354,7 +457,7 @@ function windowSegment(room, orientation) {
   return { x1: x, y1: cy - len / 2, x2: x, y2: cy + len / 2 };
 }
 
-function renderRoom(board, room, { gridW, gridH, byRoom, statusOf, windowLayer }) {
+function renderRoom(board, room, { gridW, gridH, model, statusOf, windowLayer }) {
   const group = svg('g', { class: 'bp-room' });
   const rect = svg('rect', {
     class: `bp-room__rect ${toneFor(room.id ?? room.name)}`,
@@ -376,10 +479,16 @@ function renderRoom(board, room, { gridW, gridH, byRoom, statusOf, windowLayer }
     }),
   );
 
-  const roomPlants = byRoom.get(roomKey(room.name)) ?? [];
+  const key = roomKey(room.name);
+  const floorPlants = model.floorByRoom.get(key) ?? [];
+  const roomFurniture = model.furniture.filter((piece) => piece.room.id === room.id);
+  const allRoomPlants = [
+    ...floorPlants,
+    ...roomFurniture.flatMap((piece) => model.onFurniture.get(piece.id) ?? []),
+  ];
 
   /* windows from the room's plants' orientations */
-  const orientations = [...new Set(roomPlants.map((p) => p.location?.orientation).filter(Boolean))];
+  const orientations = [...new Set(allRoomPlants.map((p) => p.location?.orientation).filter(Boolean))];
   for (const orientation of orientations) {
     const seg = windowSegment(room, orientation);
     if (!seg) continue;
@@ -391,20 +500,71 @@ function renderRoom(board, room, { gridW, gridH, byRoom, statusOf, windowLayer }
     svg('text', { class: 'bp-room__label', x: room.x + 0.55, y: room.y + 1.05 }, room.name),
   );
 
-  /* plants as potted glyphs */
+  /* furniture, then its plants on top */
+  for (const piece of roomFurniture) {
+    const rect = svg('rect', {
+      class: `bp-furn bp-furn--${piece.kind}`,
+      x: piece.absX,
+      y: piece.absY,
+      width: piece.w,
+      height: piece.h,
+      rx: 0.15,
+    });
+    group.appendChild(rect);
+    group.appendChild(
+      svg('title', {}, `${piece.spec.label}`),
+    );
+
+    if (editor) {
+      const draftPiece = editor.draft.furniture?.find((f) => f.id === piece.id);
+      if (draftPiece) {
+        const start = { x: piece.x, y: piece.y };
+        attachDrag(board, rect, (dx, dy) => {
+          draftPiece.x = clamp(Math.round((start.x + dx) * 2) / 2, 0, Math.max(0, room.w - piece.w));
+          draftPiece.y = clamp(Math.round((start.y + dy) * 2) / 2, 0, Math.max(0, room.h - piece.h));
+          rect.setAttribute('x', room.x + draftPiece.x);
+          rect.setAttribute('y', room.y + draftPiece.y);
+        });
+        group.appendChild(
+          svg(
+            'g',
+            {
+              class: 'bp-room__delete',
+              onclick: () => {
+                editor.draft.furniture = (editor.draft.furniture ?? []).filter((f) => f.id !== piece.id);
+                currentDraw?.();
+              },
+            },
+            svg('circle', { cx: piece.absX + piece.w, cy: piece.absY, r: 0.42 }),
+            svg('text', { x: piece.absX + piece.w, y: piece.absY + 0.2, 'text-anchor': 'middle' }, '✕'),
+            svg('title', {}, `Remove this ${piece.spec.label.toLowerCase()}`),
+          ),
+        );
+      }
+    } else {
+      const plantsOn = model.onFurniture.get(piece.id) ?? [];
+      plantsOn.forEach((plant, index) => {
+        const cx = piece.absX + 0.6 + (index % Math.max(1, Math.floor(piece.w / 1.1))) * 1.1;
+        const cy = piece.absY + piece.h / 2;
+        group.appendChild(renderPlantGlyph(plant, statusOf(plant), Math.min(cx, piece.absX + piece.w - 0.5), cy));
+      });
+    }
+  }
+
+  /* floor plants as potted glyphs */
   const pad = 0.85;
   const step = 1.9;
   const cols = Math.max(1, Math.floor((room.w - pad * 2) / step));
   const maxRows = Math.max(1, Math.floor((room.h - 1.7 - pad) / step));
   const capacity = cols * maxRows;
-  roomPlants.slice(0, capacity).forEach((plant, index) => {
+  floorPlants.slice(0, capacity).forEach((plant, index) => {
     const col = index % cols;
     const rowIndex = Math.floor(index / cols);
     const cx = room.x + pad + 0.5 + col * step;
     const cy = Math.min(room.y + 1.9 + 0.6 + rowIndex * step, room.y + room.h - 0.8);
     group.appendChild(renderPlantGlyph(plant, statusOf(plant), cx, cy));
   });
-  if (roomPlants.length > capacity) {
+  if (floorPlants.length > capacity) {
     group.appendChild(
       svg(
         'text',
@@ -414,7 +574,7 @@ function renderRoom(board, room, { gridW, gridH, byRoom, statusOf, windowLayer }
           y: room.y + room.h - 0.4,
           'text-anchor': 'end',
         },
-        `+${roomPlants.length - capacity}`,
+        `+${floorPlants.length - capacity}`,
       ),
     );
   }
@@ -475,19 +635,18 @@ function renderPlantGlyph(plant, status, cx, cy) {
   const state = status?.state ?? 'unknown';
   const label = `${plant.name} — ${state === 'unknown' ? 'no log yet' : state}`;
 
+  const icon = svg('svg', {
+    x: cx - 0.75,
+    y: cy - 1.05,
+    width: 1.5,
+    height: 1.9,
+    viewBox: '0 0 24 30',
+  });
+  icon.innerHTML = iconMarkup(state, plant.icon);
+
   const parts = [
     svg('circle', { class: 'bp-plant__hit', cx, cy, r: 0.95 }),
-    svg('ellipse', { class: 'bp-plant__shadow', cx, cy: cy + 0.62, rx: 0.5, ry: 0.13 }),
-    // pot
-    svg('path', {
-      class: 'bp-plant__pot',
-      d: `M${cx - 0.4} ${cy + 0.12} L${cx + 0.4} ${cy + 0.12} L${cx + 0.28} ${cy + 0.6} L${cx - 0.28} ${cy + 0.6} Z`,
-    }),
-    svg('rect', { class: 'bp-plant__rim', x: cx - 0.46, y: cy + 0.02, width: 0.92, height: 0.16, rx: 0.06 }),
-    // foliage, tinted by urgency
-    svg('circle', { class: `bp-plant__leaf bp-dot--${state}`, cx: cx - 0.24, cy: cy - 0.22, r: 0.3 }),
-    svg('circle', { class: `bp-plant__leaf bp-dot--${state}`, cx: cx + 0.24, cy: cy - 0.22, r: 0.3 }),
-    svg('circle', { class: `bp-plant__leaf bp-dot--${state}`, cx, cy: cy - 0.46, r: 0.34 }),
+    icon,
     svg('title', {}, label),
   ];
 
@@ -541,15 +700,7 @@ function makeSprite(plant, status) {
     'aria-label': label,
     title: label,
   });
-  link.innerHTML =
-    `<svg viewBox="0 0 24 30" aria-hidden="true">` +
-    `<ellipse cx="12" cy="27.4" rx="7" ry="1.8" fill="rgba(43,51,42,0.2)"/>` +
-    `<path d="M6.5 16.5 L17.5 16.5 L15.8 24 L8.2 24 Z" fill="var(--terracotta)"/>` +
-    `<rect x="5.4" y="15" width="13.2" height="2.4" rx="0.8" fill="#b5654a"/>` +
-    `<circle class="bp-dot--${state}" cx="7.6" cy="10.6" r="4.4" stroke="rgba(43,51,42,0.25)" stroke-width="0.6"/>` +
-    `<circle class="bp-dot--${state}" cx="16.4" cy="10.6" r="4.4" stroke="rgba(43,51,42,0.25)" stroke-width="0.6"/>` +
-    `<circle class="bp-dot--${state}" cx="12" cy="5.6" r="4.9" stroke="rgba(43,51,42,0.25)" stroke-width="0.6"/>` +
-    `</svg>`;
+  link.innerHTML = `<svg viewBox="0 0 24 30" aria-hidden="true">${iconMarkup(state, plant.icon)}</svg>`;
   wireTip(link, plant, status);
   return link;
 }
@@ -639,6 +790,8 @@ function attachDrag(board, node, onMove) {
 /* ================= editor controls ================= */
 
 function renderEditorControls(root, { gridW, gridH, byRoom, draw }) {
+  editor.draft.furniture ??= [];
+  editor.draft.placements ??= {};
   const placed = new Set(editor.draft.rooms.map((room) => roomKey(room.name)));
   const suggestions = [...byRoom.keys()]
     .filter((key) => key !== '(unplaced)' && !placed.has(key))
@@ -699,6 +852,50 @@ function renderEditorControls(root, { gridW, gridH, byRoom, draw }) {
       ),
       el(
         'div',
+        { class: 'field-row', style: 'grid-template-columns: 1fr 1fr auto; margin-top: 0.5rem' },
+        el(
+          'select',
+          { 'aria-label': 'Furniture kind', id: 'bp-furn-kind' },
+          Object.entries(FURNITURE_KINDS).map(([kind, spec]) =>
+            el('option', { value: kind }, spec.label),
+          ),
+        ),
+        el(
+          'select',
+          { 'aria-label': 'Room for the furniture', id: 'bp-furn-room' },
+          editor.draft.rooms.map((room) => el('option', { value: room.id }, room.name)),
+        ),
+        el(
+          'button',
+          {
+            class: 'btn',
+            onclick: () => {
+              const kind = document.getElementById('bp-furn-kind')?.value;
+              const roomId = document.getElementById('bp-furn-room')?.value;
+              const spec = FURNITURE_KINDS[kind];
+              const room = editor.draft.rooms.find((r) => r.id === roomId);
+              if (!spec || !room) return;
+              let id = `${kind}-1`;
+              let n = 2;
+              while (editor.draft.furniture.some((piece) => piece.id === id)) id = `${kind}-${n++}`;
+              editor.draft.furniture.push({
+                id,
+                roomId,
+                kind,
+                x: Math.max(0, Math.round((room.w - spec.w) / 2)),
+                y: Math.max(0, Math.round((room.h - spec.h) / 2)),
+                w: spec.w,
+                h: spec.h,
+              });
+              draw();
+            },
+          },
+          icon('plus'),
+          'Add furniture',
+        ),
+      ),
+      el(
+        'div',
         { class: 'sheet__actions' },
         el(
           'button',
@@ -716,7 +913,15 @@ function renderEditorControls(root, { gridW, gridH, byRoom, draw }) {
           {
             class: 'btn btn--primary',
             onclick: () => {
-              store.setHouse(editor.draft);
+              const draft = editor.draft;
+              // prune furniture in deleted rooms + placements onto gone pieces
+              const roomIds = new Set((draft.rooms ?? []).map((room) => room.id));
+              draft.furniture = (draft.furniture ?? []).filter((piece) => roomIds.has(piece.roomId));
+              const pieceIds = new Set(draft.furniture.map((piece) => piece.id));
+              draft.placements = Object.fromEntries(
+                Object.entries(draft.placements ?? {}).filter(([, id]) => pieceIds.has(id)),
+              );
+              store.setHouse(draft);
               editor = null;
               draw();
             },
