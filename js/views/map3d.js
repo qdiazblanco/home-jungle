@@ -224,8 +224,20 @@ export function render3D(host, { gridW, gridH, rooms, model, statusOf, plantSpri
 
       const plantsOn = model?.onFurniture.get(piece.id) ?? [];
       const spread = Math.max(1, Math.floor(w / 1.1));
-      plantsOn.forEach((plant, index) => {
-        const cx = Math.min(absX + 0.6 + (index % spread) * 1.1, absX + w - 0.5);
+      if (plantsOn.length > spread) {
+        scene.appendChild(
+          el(
+            'div',
+            {
+              class: 'd3-label d3-label--more',
+              style: `left:${px(absX + w - 0.9)}px; top:${px(absY + h + 0.15)}px; font-size:${Math.max(9, unit * 0.6)}px;`,
+            },
+            `+${plantsOn.length - spread}`,
+          ),
+        );
+      }
+      plantsOn.slice(0, spread).forEach((plant, index) => {
+        const cx = Math.min(absX + 0.6 + index * 1.1, absX + w - 0.5);
         const cy = absY + h / 2;
         const anchor = el('div', {
           class: 'd3-plant-anchor',

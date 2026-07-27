@@ -87,9 +87,9 @@ export function serializeFile(path, data) {
     canonical = orderKeys(data ?? {}, ['grid', 'rooms', 'furniture', 'placements']);
     canonical.grid = orderKeys({ w: 24, h: 16, ...(data?.grid ?? {}) }, ['w', 'h']);
     canonical.rooms = (data?.rooms ?? []).map((room) => orderKeys(room, ROOM_KEY_ORDER));
-    canonical.furniture = (Array.isArray(data?.furniture) ? data.furniture : []).map((piece) =>
-      orderKeys(piece, FURNITURE_KEY_ORDER),
-    );
+    canonical.furniture = (Array.isArray(data?.furniture) ? data.furniture : [])
+      .filter((piece) => piece && typeof piece === 'object')
+      .map((piece) => orderKeys(piece, FURNITURE_KEY_ORDER));
     canonical.placements = orderKeys(
       data?.placements && typeof data.placements === 'object' ? data.placements : {},
       [],

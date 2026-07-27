@@ -152,8 +152,12 @@ function drawContent(root, id, draw) {
     (room) => String(room.name ?? '').trim().toLowerCase() === plantRoomKey,
   );
   const roomFurniture = houseRoom
-    ? (house.furniture ?? []).filter(
-        (piece) => piece.roomId === houseRoom.id && FURNITURE_KINDS[piece.kind],
+    ? (Array.isArray(house.furniture) ? house.furniture : []).filter(
+        (piece) =>
+          piece &&
+          typeof piece === 'object' &&
+          piece.roomId === houseRoom.id &&
+          FURNITURE_KINDS[piece.kind],
       )
     : [];
   const placedOn = roomFurniture.find((piece) => piece.id === house.placements?.[plant.id]);
@@ -910,10 +914,13 @@ function openSpotSheet(plant, house, roomFurniture, placedOn, draw) {
   const { close, body } = showSheet({ title: `Spot — ${plant.name}` });
 
   const choose = (furnitureId) => {
-    const placements = { ...(house.placements ?? {}) };
+    // Re-read the snapshot: the sheet outlives re-renders, and writing the
+    // captured house back would revert edits synced while it was open.
+    const { house: current } = store.getSnapshot();
+    const placements = { ...(current.placements ?? {}) };
     if (furnitureId) placements[plant.id] = furnitureId;
     else delete placements[plant.id];
-    store.setHouse({ ...house, placements });
+    store.setHouse({ ...current, placements });
     close();
     draw();
   };
@@ -933,9 +940,12 @@ function openSpotSheet(plant, house, roomFurniture, placedOn, draw) {
     el('p', { class: 'small muted' },
       'Where this plant stands on the house map. Furniture is drawn in the map’s floor-plan editor.'),
     option('On the floor', !placedOn, () => choose(null)),
-    roomFurniture.map((piece) =>
+    // Native append does NOT flatten arrays (unlike el()) — spread it.
+    ...roomFurniture.map((piece, index) =>
       option(
-        FURNITURE_KINDS[piece.kind].label,
+        roomFurniture.filter((other) => other.kind === piece.kind).length > 1
+          ? `${FURNITURE_KINDS[piece.kind].label} ${index + 1}`
+          : FURNITURE_KINDS[piece.kind].label,
         placedOn?.id === piece.id,
         () => choose(piece.id),
       ),

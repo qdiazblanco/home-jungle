@@ -58,10 +58,14 @@ function furnitureModel(layout, byRoom) {
   const placements =
     layout?.placements && typeof layout.placements === 'object' ? layout.placements : {};
 
+  const seenIds = new Set();
   const furniture = (Array.isArray(layout?.furniture) ? layout.furniture : []).flatMap((piece) => {
+    if (!piece || typeof piece !== 'object') return []; // hand-edit tolerance
     const room = roomsById.get(piece.roomId);
     const spec = FURNITURE_KINDS[piece.kind];
     if (!room || !spec || !Number.isFinite(piece.x) || !Number.isFinite(piece.y)) return [];
+    if (seenIds.has(piece.id)) return []; // duplicate ids: first wins everywhere
+    seenIds.add(piece.id);
     const w = Number(piece.w) || spec.w;
     const h = Number(piece.h) || spec.h;
     return [{ ...piece, w, h, spec, room, absX: room.x + piece.x, absY: room.y + piece.y }];
@@ -510,10 +514,8 @@ function renderRoom(board, room, { gridW, gridH, model, statusOf, windowLayer })
       height: piece.h,
       rx: 0.15,
     });
+    rect.appendChild(svg('title', {}, piece.spec.label));
     group.appendChild(rect);
-    group.appendChild(
-      svg('title', {}, `${piece.spec.label}`),
-    );
 
     if (editor) {
       const draftPiece = editor.draft.furniture?.find((f) => f.id === piece.id);
@@ -535,19 +537,29 @@ function renderRoom(board, room, { gridW, gridH, model, statusOf, windowLayer })
                 currentDraw?.();
               },
             },
-            svg('circle', { cx: piece.absX + piece.w, cy: piece.absY, r: 0.42 }),
-            svg('text', { x: piece.absX + piece.w, y: piece.absY + 0.2, 'text-anchor': 'middle' }, '✕'),
+            svg('circle', { cx: piece.absX + piece.w - 0.45, cy: piece.absY + 0.45, r: 0.42 }),
+            svg('text', { x: piece.absX + piece.w - 0.45, y: piece.absY + 0.65, 'text-anchor': 'middle' }, '✕'),
             svg('title', {}, `Remove this ${piece.spec.label.toLowerCase()}`),
           ),
         );
       }
     } else {
       const plantsOn = model.onFurniture.get(piece.id) ?? [];
-      plantsOn.forEach((plant, index) => {
-        const cx = piece.absX + 0.6 + (index % Math.max(1, Math.floor(piece.w / 1.1))) * 1.1;
+      const seats = Math.max(1, Math.floor(piece.w / 1.1));
+      plantsOn.slice(0, seats).forEach((plant, index) => {
+        const cx = piece.absX + 0.6 + index * 1.1;
         const cy = piece.absY + piece.h / 2;
         group.appendChild(renderPlantGlyph(plant, statusOf(plant), Math.min(cx, piece.absX + piece.w - 0.5), cy));
       });
+      if (plantsOn.length > seats) {
+        group.appendChild(
+          svg(
+            'text',
+            { class: 'bp-room__more', x: piece.absX + piece.w - 0.15, y: piece.absY + piece.h + 0.55, 'text-anchor': 'end' },
+            `+${plantsOn.length - seats}`,
+          ),
+        );
+      }
     }
   }
 
@@ -914,12 +926,25 @@ function renderEditorControls(root, { gridW, gridH, byRoom, draw }) {
             class: 'btn btn--primary',
             onclick: () => {
               const draft = editor.draft;
-              // prune furniture in deleted rooms + placements onto gone pieces
+              // prune: furniture in deleted rooms, placements onto gone pieces,
+              // and placements whose plant left the piece's room (or the jungle)
               const roomIds = new Set((draft.rooms ?? []).map((room) => room.id));
-              draft.furniture = (draft.furniture ?? []).filter((piece) => roomIds.has(piece.roomId));
-              const pieceIds = new Set(draft.furniture.map((piece) => piece.id));
+              draft.furniture = (draft.furniture ?? []).filter(
+                (piece) => piece && typeof piece === 'object' && roomIds.has(piece.roomId),
+              );
+              const pieces = new Map(draft.furniture.map((piece) => [piece.id, piece]));
+              const roomsById = new Map((draft.rooms ?? []).map((room) => [room.id, room]));
+              const plantRooms = new Map();
+              for (const [key, plants] of byRoom) {
+                for (const plant of plants) plantRooms.set(plant.id, key);
+              }
               draft.placements = Object.fromEntries(
-                Object.entries(draft.placements ?? {}).filter(([, id]) => pieceIds.has(id)),
+                Object.entries(draft.placements ?? {}).filter(([plantId, pieceId]) => {
+                  const piece = pieces.get(pieceId);
+                  if (!piece) return false;
+                  const pieceRoom = roomsById.get(piece.roomId);
+                  return pieceRoom && plantRooms.get(plantId) === roomKey(pieceRoom.name);
+                }),
               );
               store.setHouse(draft);
               editor = null;
