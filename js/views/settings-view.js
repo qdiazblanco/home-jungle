@@ -322,7 +322,7 @@ function tokenGuide(coords) {
       { class: 'guide-steps small' },
       el('li', {}, 'On GitHub: ', el('strong', {}, 'Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token'),
         ' (', el('a', { href: 'https://github.com/settings/personal-access-tokens/new', target: '_blank', rel: 'noopener' }, 'direct link'), ').'),
-      el('li', {}, 'Name it something like “digital-garden phone”.'),
+      el('li', {}, 'Name it something like “home-jungle phone”.'),
       el('li', {}, 'Set the expiration you are comfortable with (you will paste a fresh one when it expires — the app will tell you).'),
       el('li', {}, 'Repository access: ', el('strong', {}, 'Only select repositories'), ' → ', el('code', {}, repoName), '.'),
       el('li', {}, 'Permissions → Repository permissions → ', el('strong', {}, 'Contents: Read and write'), '. Nothing else.'),

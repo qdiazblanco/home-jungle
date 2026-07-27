@@ -201,7 +201,7 @@ export async function putFile(path, text, sha, message) {
   const { owner, repo, branch } = coordsOrThrow();
   const { author } = getSettings();
   const gitAuthor = author
-    ? { name: author, email: `${author.toLowerCase().replace(/[^a-z0-9]+/g, '-')}@digital-garden.local` }
+    ? { name: author, email: `${author.toLowerCase().replace(/[^a-z0-9]+/g, '-')}@home-jungle.local` }
     : undefined;
   const res = await apiFetch(`/repos/${owner}/${repo}/contents/${path}`, {
     method: 'PUT',

@@ -1,4 +1,4 @@
-# Digital Garden 🌿
+# Kipe's Home Jungle 🌿
 
 A living encyclopedia and day-to-day care tracker for our houseplants —
 a static PWA on GitHub Pages with **no backend at all**: the data lives in
@@ -35,7 +35,7 @@ of this repository.
 1. GitHub → **Settings → Developer settings → Personal access tokens →
    Fine-grained tokens → Generate new token**
    ([direct link](https://github.com/settings/personal-access-tokens/new)).
-2. Name it per device ("digital-garden — Kike's phone"), pick an
+2. Name it per device ("home-jungle — Kike's phone"), pick an
    expiration you're comfortable with.
 3. **Repository access → Only select repositories** → this repo.
 4. **Permissions → Repository permissions → Contents: Read and write.**

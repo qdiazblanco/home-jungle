@@ -1,7 +1,7 @@
 {
-  "name": "Digital Garden",
-  "short_name": "Garden",
-  "id": "digital-garden",
+  "name": "Kipe's Home Jungle",
+  "short_name": "Home Jungle",
+  "id": "kipes-home-jungle",
   "description": "A living encyclopedia and day-to-day care tracker for our houseplants.",
   "start_url": "./",
   "scope": "./",
