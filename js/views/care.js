@@ -323,6 +323,8 @@ function openMoreSheet(plant, row) {
     item('Edit watering rhythm (summer)', () => openCareEdit(plant, 'watering_days_summer')),
     item('Edit watering rhythm (winter)', () => openCareEdit(plant, 'watering_days_winter')),
     item('Edit sun need', () => openCareEdit(plant, 'sun_need')),
+    item('Edit feeding (summer)', () => openCareEdit(plant, 'feeding_summer')),
+    item('Edit feeding (winter)', () => openCareEdit(plant, 'feeding_winter')),
     item('Open profile', () => {
       window.location.hash = `#/plant/${encodeURIComponent(plant.id)}`;
     }),
