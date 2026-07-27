@@ -88,6 +88,16 @@ export function validateData(plants, events, opts = {}) {
       });
     }
 
+    if (plant.pot != null) {
+      const d = plant.pot?.diameter_cm;
+      if (typeof plant.pot !== 'object' || (d != null && !(Number.isFinite(Number(d)) && Number(d) > 0))) {
+        issues.push({
+          path: `${where}.pot`,
+          message: `Pot should look like { "diameter_cm": 18 } — got ${JSON.stringify(plant.pot)}.`,
+        });
+      }
+    }
+
     if (plant.acquired != null && !dayOf(plant.acquired)) {
       issues.push({
         path: `${where}.acquired`,

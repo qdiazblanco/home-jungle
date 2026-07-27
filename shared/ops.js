@@ -81,7 +81,7 @@ export function diffPlant(base, edited) {
 
 /** Which data file an op targets. */
 export function fileForOp(op) {
-  return op.type === 'appendEvents' || op.type === 'removeEvent'
+  return op.type === 'appendEvents' || op.type === 'removeEvent' || op.type === 'updateEvent'
     ? 'data/events.json'
     : 'data/plants.json';
 }
@@ -98,6 +98,15 @@ export function applyOp(data, op) {
     case 'removeEvent': {
       if (!data.events.some((e) => e.id === op.id)) return data;
       return { ...data, events: data.events.filter((e) => e.id !== op.id) };
+    }
+    case 'updateEvent': {
+      const index = data.events.findIndex((e) => e.id === op.id);
+      if (index === -1) return data;
+      const updated = { ...data.events[index], ...op.changes };
+      if (deepEqual(updated, data.events[index])) return data;
+      const events = [...data.events];
+      events[index] = updated;
+      return { ...data, events };
     }
     case 'createPlant': {
       if (data.plants.some((p) => p.id === op.plant.id)) return data;
@@ -153,6 +162,8 @@ export function describeOp(op, plantsById = new Map()) {
     }
     case 'removeEvent':
       return 'delete a logged event';
+    case 'updateEvent':
+      return 'edit a logged event';
     case 'createPlant':
       return `new plant "${op.plant.name}"`;
     case 'patchPlant':

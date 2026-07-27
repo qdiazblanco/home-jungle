@@ -300,6 +300,12 @@ export function removeEvent(eventId) {
   notify();
 }
 
+/** Fix a logged event in place (author, date, note). */
+export function updateEvent(eventId, changes) {
+  gh.enqueue({ type: 'updateEvent', id: eventId, changes });
+  notify();
+}
+
 export function dismissIssues() {
   state.issues = [];
   notify();

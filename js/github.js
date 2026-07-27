@@ -25,7 +25,7 @@ const MIRROR_KEY = 'digital-garden:mirror';
 /* ================= canonical serialization ================= */
 
 const PLANT_KEY_ORDER = [
-  'id', 'name', 'species', 'nickname', 'location', 'photo', 'acquired',
+  'id', 'name', 'species', 'nickname', 'location', 'pot', 'photo', 'acquired',
   'parent', 'care', 'general_notes', 'status',
 ];
 const LOCATION_KEY_ORDER = ['room', 'orientation', 'detail'];
@@ -600,6 +600,8 @@ function commitMessage(batch) {
       subject = `plant: edit ${nameOf(op.plantId)}`;
     } else if (op.type === 'removeEvent') {
       subject = 'log: remove an entry';
+    } else if (op.type === 'updateEvent') {
+      subject = 'log: edit an entry';
     } else {
       subject = describeOp(op, byId);
     }

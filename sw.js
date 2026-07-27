@@ -42,6 +42,7 @@ const SHELL = [
   './shared/warnings.js',
   './shared/validate.js',
   './shared/markdown.js',
+  './shared/pot.js',
   './shared/ops.js',
   './img/icons/favicon.svg',
   './img/icons/icon-192.png',
