@@ -37,10 +37,10 @@ const HUMIDITY_OPTIONS = [
   'Irrelevant',
 ];
 const FEEDING_OPTIONS = [
-  'Biweekly in spring–summer',
-  'Monthly in the growing season',
-  'Monthly at half strength, spring–summer',
-  'Every 2–3 weeks in the growing season',
+  'Biweekly',
+  'Monthly',
+  'Monthly at half strength',
+  'Every 2–3 weeks',
   'Twice a year at most',
   'None',
 ];
@@ -81,7 +81,8 @@ export function render(container, params, routeName) {
           watering_days_summer: 7,
           watering_days_winter: 14,
           humidity: '',
-          feeding: '',
+          feeding_summer: '',
+          feeding_winter: 'None',
           substrate_recipe: [],
           toxic_to_pets: false,
         },
@@ -97,6 +98,14 @@ export function render(container, params, routeName) {
   state.care ??= {};
   state.care.reference ??= {};
   state.care.observed ??= {};
+
+  // Legacy single feeding field → seasonal split (saving migrates the plant).
+  const legacyRef = state.care.reference;
+  if (legacyRef.feeding && !legacyRef.feeding_summer && !legacyRef.feeding_winter) {
+    legacyRef.feeding_summer = legacyRef.feeding;
+    legacyRef.feeding_winter = legacyRef.feeding;
+    delete legacyRef.feeding;
+  }
 
   /* ---------- field helpers ---------- */
 
@@ -379,10 +388,15 @@ export function render(container, params, routeName) {
       field('Humidity', presetInput('humidity-list', HUMIDITY_OPTIONS,
         () => state.care.reference.humidity,
         (v) => { state.care.reference.humidity = v; })),
-      field('Feeding', presetInput('feeding-list', FEEDING_OPTIONS,
-        () => state.care.reference.feeding,
-        (v) => { state.care.reference.feeding = v; },
-        { placeholder: 'Biweekly in spring–summer' },
+      field('Feeding · summer', presetInput('feeding-summer-list', FEEDING_OPTIONS,
+        () => state.care.reference.feeding_summer,
+        (v) => { state.care.reference.feeding_summer = v; },
+        { placeholder: 'Biweekly' },
+      )),
+      field('Feeding · winter', presetInput('feeding-winter-list', FEEDING_OPTIONS,
+        () => state.care.reference.feeding_winter,
+        (v) => { state.care.reference.feeding_winter = v; },
+        { placeholder: 'None' },
       )),
       field('Toxic to pets', selectInput(['no', 'yes'],
         () => (state.care.reference.toxic_to_pets ? 'yes' : 'no'),

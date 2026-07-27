@@ -23,7 +23,8 @@
         "watering_days_summer": 7,
         "watering_days_winter": 12,
         "humidity": "Medium-high, appreciates misting",
-        "feeding": "Biweekly in spring–summer",
+        "feeding_summer": "Biweekly",
+        "feeding_winter": "None",
         "substrate_recipe": [
           {
             "component": "All-purpose potting mix",
@@ -74,7 +75,8 @@
         "watering_days_summer": 7,
         "watering_days_winter": 14,
         "humidity": "Undemanding",
-        "feeding": "Monthly in the growing season",
+        "feeding_summer": "Monthly",
+        "feeding_winter": "None",
         "substrate_recipe": [
           {
             "component": "All-purpose potting mix",
@@ -116,7 +118,8 @@
         "watering_days_summer": 7,
         "watering_days_winter": 14,
         "humidity": "Undemanding",
-        "feeding": "Not yet — too young, start next spring",
+        "feeding_summer": "Not yet — too young, start next spring",
+        "feeding_winter": "None",
         "substrate_recipe": [
           {
             "component": "All-purpose potting mix",
@@ -158,7 +161,8 @@
         "watering_days_summer": 4,
         "watering_days_winter": 8,
         "humidity": "High — 60%+ or crispy edges",
-        "feeding": "Monthly at half strength, spring–summer",
+        "feeding_summer": "Monthly at half strength",
+        "feeding_winter": "None",
         "substrate_recipe": [
           {
             "component": "Coco coir",
@@ -208,7 +212,8 @@
         "watering_days_summer": 14,
         "watering_days_winter": 30,
         "humidity": "Irrelevant",
-        "feeding": "Twice a year at most",
+        "feeding_summer": "Twice a year at most",
+        "feeding_winter": "None",
         "substrate_recipe": [
           {
             "component": "Cactus mix",
@@ -250,7 +255,8 @@
         "watering_days_summer": 7,
         "watering_days_winter": 12,
         "humidity": "High — would appreciate the humidifier",
-        "feeding": "Every 2–3 weeks in the growing season",
+        "feeding_summer": "Every 2–3 weeks",
+        "feeding_winter": "None — fully dormant",
         "substrate_recipe": [
           {
             "component": "All-purpose potting mix",
@@ -292,7 +298,8 @@
         "watering_days_summer": 14,
         "watering_days_winter": 25,
         "humidity": "Low",
-        "feeding": "Every 1 or 2 months, spring-autumn; nothing in winter.",
+        "feeding_summer": "Every 1 or 2 months, spring–autumn",
+        "feeding_winter": "None",
         "substrate_recipe": [
           {
             "component": "Turba",

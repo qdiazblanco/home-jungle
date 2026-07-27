@@ -31,7 +31,8 @@ const PLANT_KEY_ORDER = [
 const LOCATION_KEY_ORDER = ['room', 'orientation', 'detail'];
 const CARE_PARAM_ORDER = [
   'source', 'light', 'sun_need', 'watering_days_summer', 'watering_days_winter',
-  'humidity', 'feeding', 'substrate_recipe', 'toxic_to_pets',
+  'humidity', 'feeding', 'feeding_summer', 'feeding_winter', 'substrate_recipe',
+  'toxic_to_pets',
 ];
 const EVENT_KEY_ORDER = ['id', 'plantId', 'type', 'date', 'author', 'note'];
 

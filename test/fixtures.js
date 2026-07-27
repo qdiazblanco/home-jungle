@@ -18,7 +18,8 @@ export function makePlant(overrides = {}) {
         watering_days_summer: 7,
         watering_days_winter: 12,
         humidity: 'Medium',
-        feeding: 'Biweekly in spring–summer',
+        feeding_summer: 'Biweekly',
+        feeding_winter: 'None',
         substrate_recipe: [
           { component: 'Potting mix', ratio: '70%' },
           { component: 'Perlite', ratio: '30%' },
