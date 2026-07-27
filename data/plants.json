@@ -256,5 +256,36 @@
     },
     "general_notes": "Spotted at the little plant shop on Calle Hierbabuena — those zebra stems! Holding off until the monstera corner gets its humidifier, alocasias are famously dramatic about dry air.\n\nReportedly goes fully dormant in winter: do not panic, do not overwater.",
     "status": "wishlist"
+  },
+  {
+    "id": "kitchen-jade-plant",
+    "name": "Kitchen Jade Plant",
+    "species": "Crassula ovata 'Variegata'",
+    "nickname": "Jade",
+    "location": {
+      "room": "Kitchen",
+      "orientation": "",
+      "detail": "Next to the window"
+    },
+    "photo": null,
+    "acquired": "2025-07-27",
+    "parent": null,
+    "care": {
+      "reference": {
+        "sun_need": "medium",
+        "watering_days_summer": 7,
+        "watering_days_winter": 14,
+        "substrate_recipe": [
+          {
+            "component": "Turba",
+            "ratio": "100"
+          }
+        ],
+        "toxic_to_pets": false
+      },
+      "observed": {}
+    },
+    "general_notes": "",
+    "status": "active"
   }
 ]
