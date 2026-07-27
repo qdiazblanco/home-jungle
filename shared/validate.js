@@ -92,14 +92,21 @@ export function validateData(plants, events, opts = {}) {
       const d = plant.pot?.diameter_cm;
       // pot is optional, so a pot without a usable diameter_cm is always a
       // hand-edit mistake (wrong key name, array, scalar…).
+      const b = plant.pot?.base_diameter_cm;
       if (
         typeof plant.pot !== 'object' ||
         Array.isArray(plant.pot) ||
-        !(Number.isFinite(Number(d)) && Number(d) > 0)
+        !(Number.isFinite(Number(d)) && Number(d) > 0) ||
+        (b != null && !(Number.isFinite(Number(b)) && Number(b) > 0))
       ) {
         issues.push({
           path: `${where}.pot`,
-          message: `Pot should look like { "diameter_cm": 18 } — got ${JSON.stringify(plant.pot)}.`,
+          message: `Pot should look like { "diameter_cm": 18, "base_diameter_cm": 13 } (base optional) — got ${JSON.stringify(plant.pot)}.`,
+        });
+      } else if (b != null && Number(b) > Number(d)) {
+        issues.push({
+          path: `${where}.pot`,
+          message: `Pot base (${b} cm) is wider than its top (${d} cm) — swapped values?`,
         });
       }
     }
