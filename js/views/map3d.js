@@ -8,7 +8,7 @@
 
 import { el } from '../ui.js';
 
-const WALL_H = 1.15; // wall height in grid units
+const WALL_H = 1.6; // wall height in grid units
 const roomKey = (name) => String(name ?? '').trim().toLowerCase();
 
 // Session-persistent camera (module-level, like the map's other view state).
@@ -229,8 +229,9 @@ export function render3D(host, { gridW, gridH, rooms, byRoom, statusOf, plantSpr
       if (ev.pointerId !== activePointer) return;
       if (ev.buttons === 0) return up();
       // yaw stays continuous (no wrapping): the compass needle transitions,
-      // and a ±360° jump would spin it a full backwards turn.
-      orbit.yaw = startYaw + (ev.clientX - startX) * 0.4;
+      // and a ±360° jump would spin it a full backwards turn. Negative dx
+      // factor = "grab the house": drag right, house turns right.
+      orbit.yaw = startYaw - (ev.clientX - startX) * 0.4;
       orbit.tilt = Math.min(78, Math.max(25, startTilt - (ev.clientY - startY) * 0.25));
       apply();
     };
