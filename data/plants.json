@@ -272,16 +272,19 @@
     "parent": null,
     "care": {
       "reference": {
-        "sun_need": "medium",
-        "watering_days_summer": 7,
-        "watering_days_winter": 14,
+        "source": "https://soltech.com/products/variegated-jade-plant-care",
+        "sun_need": "high",
+        "watering_days_summer": 14,
+        "watering_days_winter": 25,
+        "humidity": "Low",
+        "feeding": "Every 1 or 2 months, spring-autumn; nothing in winter.",
         "substrate_recipe": [
           {
             "component": "Turba",
             "ratio": "100"
           }
         ],
-        "toxic_to_pets": false
+        "toxic_to_pets": true
       },
       "observed": {}
     },
