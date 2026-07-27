@@ -81,6 +81,7 @@ export function diffPlant(base, edited) {
 
 /** Which data file an op targets. */
 export function fileForOp(op) {
+  if (op.type === 'setHouse') return 'data/house.json';
   return op.type === 'appendEvents' || op.type === 'removeEvent' || op.type === 'updateEvent'
     ? 'data/events.json'
     : 'data/plants.json';
@@ -98,6 +99,12 @@ export function applyOp(data, op) {
     case 'removeEvent': {
       if (!data.events.some((e) => e.id === op.id)) return data;
       return { ...data, events: data.events.filter((e) => e.id !== op.id) };
+    }
+    case 'setHouse': {
+      // Whole-layout replacement: floor-plan edits are rare and low-conflict,
+      // last-write-wins is fine. Identity return keeps replay idempotent.
+      if (deepEqual(op.house, data.house)) return data;
+      return { ...data, house: structuredClone(op.house) };
     }
     case 'updateEvent': {
       const index = data.events.findIndex((e) => e.id === op.id);
@@ -164,6 +171,8 @@ export function describeOp(op, plantsById = new Map()) {
       return 'delete a logged event';
     case 'updateEvent':
       return 'edit a logged event';
+    case 'setHouse':
+      return 'update the floor plan';
     case 'createPlant':
       return `new plant "${op.plant.name}"`;
     case 'patchPlant':

@@ -1224,6 +1224,254 @@ code {
   border-left: 2px solid var(--line);
 }
 
+/* ---------- Header nav (calendar + map) ---------- */
+
+.header-nav {
+  display: flex;
+  gap: var(--sp-1);
+  margin-left: auto;
+  margin-right: var(--sp-2);
+}
+
+.header-nav__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  border-radius: var(--radius-md);
+  color: var(--ink-soft);
+}
+
+.header-nav__link .icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.header-nav__link--active {
+  color: var(--leaf-deep);
+  background: var(--leaf-tint);
+}
+
+@media (max-width: 22.5rem) {
+  .brand span,
+  .brand {
+    font-size: var(--text-md);
+  }
+}
+
+/* ---------- Calendar (month grid) ---------- */
+
+.cal-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.cal-nav__label {
+  min-width: 9.5rem;
+  text-align: center;
+  font-family: var(--font-display);
+}
+
+.cal-card {
+  padding: var(--sp-2);
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.cal-grid__weekday {
+  text-align: center;
+  padding: var(--sp-1) 0;
+  font-weight: 600;
+}
+
+.cal-cell {
+  position: relative;
+  min-height: 3rem;
+  padding: 4px 2px 2px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cal-cell:hover {
+  background: var(--paper-sunken);
+}
+
+.cal-cell--outside {
+  opacity: 0.35;
+}
+
+.cal-cell--today {
+  border-color: var(--leaf);
+}
+
+.cal-cell--today .cal-cell__num {
+  color: var(--leaf-deep);
+  font-weight: 700;
+}
+
+.cal-cell--selected {
+  background: var(--leaf-tint);
+}
+
+.cal-cell__num {
+  font-size: var(--text-sm);
+}
+
+.cal-cell__dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  align-items: center;
+}
+
+.cal-cell__more {
+  font-size: 0.62rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+.cal-dot--watering { background: var(--info); }
+.cal-dot--feeding { background: var(--state-soon); }
+.cal-dot--repotting { background: var(--terracotta); }
+.cal-dot--treatment { background: var(--state-overdue); }
+.cal-dot--misting { background: var(--leaf); }
+.cal-dot--pruning,
+.cal-dot--cutting { background: var(--leaf-deep); }
+.cal-dot--note,
+.cal-dot--photo { background: var(--ink-faint); }
+
+.cal-season__item {
+  padding: 2px 0;
+}
+
+/* ---------- Blueprint (house map) ---------- */
+
+.bp-card {
+  padding: var(--sp-2);
+}
+
+.bp {
+  width: 100%;
+  height: auto;
+  display: block;
+  touch-action: none;
+}
+
+.bp-walls {
+  fill: var(--paper-sunken);
+  stroke: var(--ink);
+  stroke-width: 0.25;
+}
+
+.bp-room__rect {
+  fill: var(--paper-raised);
+  stroke: var(--ink-soft);
+  stroke-width: 0.12;
+}
+
+.bp--editing .bp-room__rect {
+  cursor: grab;
+  stroke: var(--leaf-deep);
+  stroke-dasharray: 0.4 0.25;
+}
+
+.bp-room__label {
+  font-size: 0.75px;
+  font-family: var(--font-display);
+  fill: var(--ink);
+  pointer-events: none;
+}
+
+.bp-room__more {
+  font-size: 0.6px;
+  fill: var(--ink-faint);
+  pointer-events: none;
+}
+
+.bp-plant {
+  cursor: pointer;
+}
+
+.bp-plant__hit {
+  fill: transparent;
+}
+
+.bp-plant__dot {
+  stroke: var(--paper-raised);
+  stroke-width: 0.08;
+}
+
+.bp-dot--fine { fill: var(--state-fine); }
+.bp-dot--soon { fill: var(--state-soon); }
+.bp-dot--due { fill: var(--state-due); }
+.bp-dot--overdue { fill: var(--state-overdue); }
+.bp-dot--unknown { fill: var(--state-unknown); }
+
+.bp-legend__dot.bp-dot--fine { background: var(--state-fine); }
+.bp-legend__dot.bp-dot--soon { background: var(--state-soon); }
+.bp-legend__dot.bp-dot--due { background: var(--state-due); }
+.bp-legend__dot.bp-dot--overdue { background: var(--state-overdue); }
+.bp-legend__dot.bp-dot--unknown { background: var(--state-unknown); }
+
+.bp-room__resize {
+  fill: var(--leaf);
+  cursor: nwse-resize;
+}
+
+.bp-room__delete circle {
+  fill: var(--danger-bg);
+  stroke: var(--danger);
+  stroke-width: 0.06;
+  cursor: pointer;
+}
+
+.bp-room__delete text {
+  font-size: 0.6px;
+  fill: var(--danger);
+  pointer-events: none;
+}
+
+.bp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin: var(--sp-2) 0 var(--sp-4);
+}
+
+.bp-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bp-legend__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
 /* ---------- Wider screens ---------- */
 
 @media (min-width: 48rem) {

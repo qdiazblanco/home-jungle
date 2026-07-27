@@ -23,10 +23,13 @@ import { getSettings, isGardener, onSettingsChange } from './settings.js';
 import { snackbar } from './ui.js';
 import { ensureAuthor } from './components/author-gate.js';
 
+export const DEFAULT_HOUSE = { grid: { w: 24, h: 16 }, rooms: [] };
+
 const state = {
   phase: 'loading', // 'loading' | 'ready' | 'error'
   plants: [],
   events: [],
+  house: DEFAULT_HOUSE,
   errors: [],
   issues: [],
   source: null, // 'api' | 'pages' | 'mirror'
@@ -56,12 +59,13 @@ export function getSnapshot() {
   if (!snapshotCache) {
     const queued = gh.pendingOps().filter((e) => !e.parked).map((e) => e.op);
     const data = applyOps(
-      { plants: state.plants, events: state.events },
+      { plants: state.plants, events: state.events, house: state.house },
       [...queued, ...graceOps.map((g) => g.op)],
     );
     snapshotCache = {
       plants: data.plants,
       events: data.events,
+      house: data.house ?? DEFAULT_HOUSE,
       plantsById: new Map(data.plants.map((p) => [p.id, p])),
     };
   }
@@ -99,7 +103,12 @@ async function fetchPagesFile(path) {
   return res.text();
 }
 
-function adopt(plants, events, source) {
+function normalizeHouse(house) {
+  if (!house || typeof house !== 'object' || !Array.isArray(house.rooms)) return DEFAULT_HOUSE;
+  return house;
+}
+
+function adopt(plants, events, source, house = undefined) {
   const { errors, issues } = validateData(plants, events, { today: todayString() });
   if (errors.length) {
     state.phase = 'error';
@@ -110,6 +119,7 @@ function adopt(plants, events, source) {
     state.phase = 'ready';
     state.plants = plants;
     state.events = events;
+    if (house !== undefined) state.house = normalizeHouse(house);
     state.errors = [];
     state.issues = issues;
     state.source = source;
@@ -133,16 +143,19 @@ export async function load() {
   // 1) Gardener online: the API is the source of truth (and write base).
   if (isGardener() && navigator.onLine) {
     try {
-      const [plantsFile, eventsFile] = await Promise.all([
+      const [plantsFile, eventsFile, houseFile] = await Promise.all([
         gh.getFile(gh.PLANTS_PATH),
         gh.getFile(gh.EVENTS_PATH),
+        gh.getFile(gh.HOUSE_PATH).catch(() => null), // optional file
       ]);
       const plants = plantsFile ? parseOrNull(plantsFile.text) : [];
       const events = eventsFile ? parseOrNull(eventsFile.text) : [];
+      const house = houseFile ? parseOrNull(houseFile.text) : null;
       if (Array.isArray(plants) && Array.isArray(events)) {
         gh.updateMirror(gh.PLANTS_PATH, plants, plantsFile?.sha ?? null);
         gh.updateMirror(gh.EVENTS_PATH, events, eventsFile?.sha ?? null);
-        adopt(plants, events, 'api');
+        if (houseFile) gh.updateMirror(gh.HOUSE_PATH, normalizeHouse(house), houseFile.sha ?? null);
+        adopt(plants, events, 'api', house);
         gh.scheduleFlush(500); // drain anything queued from a previous session
         return;
       }
@@ -158,18 +171,20 @@ export async function load() {
   const mirrorPlants = gh.mirrorEntry(gh.PLANTS_PATH);
   const mirrorEvents = gh.mirrorEntry(gh.EVENTS_PATH);
   if (isGardener() && mirrorPlants && mirrorEvents) {
-    adopt(mirrorPlants.data, mirrorEvents.data, 'mirror');
+    adopt(mirrorPlants.data, mirrorEvents.data, 'mirror', gh.mirrorEntry(gh.HOUSE_PATH)?.data);
     return;
   }
 
   // 3) Pages JSON (visitor path, or first gardener run with API trouble).
   try {
-    const [plantsText, eventsText] = await Promise.all([
+    const [plantsText, eventsText, houseText] = await Promise.all([
       fetchPagesFile('data/plants.json'),
       fetchPagesFile('data/events.json'),
+      fetchPagesFile('data/house.json').catch(() => null), // optional file
     ]);
     const plants = parseOrNull(plantsText);
     const events = parseOrNull(eventsText);
+    const house = houseText ? parseOrNull(houseText) : null;
     if (plants === null || events === null) {
       state.phase = 'error';
       state.errors = [
@@ -185,11 +200,12 @@ export async function load() {
     if (!isGardener()) {
       gh.updateMirror(gh.PLANTS_PATH, plants, null);
       gh.updateMirror(gh.EVENTS_PATH, events, null);
+      if (house) gh.updateMirror(gh.HOUSE_PATH, normalizeHouse(house), null);
     }
-    adopt(plants, events, 'pages');
+    adopt(plants, events, 'pages', house);
   } catch (err) {
     if (mirrorPlants && mirrorEvents) {
-      adopt(mirrorPlants.data, mirrorEvents.data, 'mirror');
+      adopt(mirrorPlants.data, mirrorEvents.data, 'mirror', gh.mirrorEntry(gh.HOUSE_PATH)?.data);
       return;
     }
     state.phase = 'error';
@@ -306,6 +322,12 @@ export function updateEvent(eventId, changes) {
   notify();
 }
 
+/** Replace the floor plan (blueprint editor). */
+export function setHouse(house) {
+  gh.enqueue({ type: 'setHouse', house });
+  notify();
+}
+
 export function dismissIssues() {
   state.issues = [];
   notify();
@@ -324,6 +346,8 @@ function adoptMirror() {
   if (plants && events) {
     state.plants = plants.data;
     state.events = events.data;
+    const house = gh.mirrorEntry(gh.HOUSE_PATH);
+    if (house) state.house = normalizeHouse(house.data);
   }
 }
 

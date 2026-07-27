@@ -32,6 +32,7 @@ const SELF_MANAGED = new Set(['plant-edit', 'add']);
 
 const viewEl = document.getElementById('view');
 const tabBarEl = document.getElementById('tab-bar');
+const headerNavEl = document.getElementById('header-nav');
 
 let route = { name: 'today', params: {} };
 let dismissedIssues = false;
@@ -39,7 +40,31 @@ let renderedPhase = null;
 
 /* ---------------- tab bar ---------------- */
 
+function renderHeaderNav() {
+  clear(headerNavEl);
+  const entries = [
+    { href: '#/calendar', label: 'Calendar', iconName: 'calendar', active: route.name === 'calendar' },
+    { href: '#/map', label: 'House map', iconName: 'mapIcon', active: route.name === 'map' },
+  ];
+  for (const entry of entries) {
+    headerNavEl.appendChild(
+      el(
+        'a',
+        {
+          class: `header-nav__link${entry.active ? ' header-nav__link--active' : ''}`,
+          href: entry.href,
+          'aria-label': entry.label,
+          title: entry.label,
+          ...(entry.active ? { 'aria-current': 'page' } : {}),
+        },
+        icon(entry.iconName),
+      ),
+    );
+  }
+}
+
 function renderTabBar() {
+  renderHeaderNav();
   clear(tabBarEl);
   const tabs = [
     { href: '#/', label: 'Today', iconName: 'leaf', active: route.name === 'today' },

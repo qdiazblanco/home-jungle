@@ -60,6 +60,40 @@ export function yearOf(day) {
 }
 
 /**
+ * Calendar month grid for a year/month (1–12): an array of weeks (Monday
+ * first), each week an array of 7 cells { day: "YYYY-MM-DD", inMonth }.
+ * Leading/trailing cells come from the neighbouring months so every week
+ * is complete. Pure UTC arithmetic — timezone-proof like everything here.
+ */
+export function monthGrid(year, month) {
+  const first = Date.UTC(year, month - 1, 1);
+  // getUTCDay: 0=Sunday … 6=Saturday → Monday-first offset
+  const lead = (new Date(first).getUTCDay() + 6) % 7;
+  const start = first - lead * MS_PER_DAY;
+  const weeks = [];
+  for (let cursor = start; ; ) {
+    const week = [];
+    for (let i = 0; i < 7; i++, cursor += MS_PER_DAY) {
+      const d = new Date(cursor);
+      week.push({
+        day: `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`,
+        inMonth: d.getUTCMonth() === month - 1 && d.getUTCFullYear() === year,
+      });
+    }
+    weeks.push(week);
+    const next = new Date(cursor);
+    if (next.getUTCMonth() !== month - 1 || next.getUTCFullYear() !== year) break;
+  }
+  return weeks;
+}
+
+/** { year, month } shifted by n months (month 1–12). */
+export function addMonths(year, month, n) {
+  const total = year * 12 + (month - 1) + n;
+  return { year: Math.floor(total / 12), month: (total % 12 + 12) % 12 + 1 };
+}
+
+/**
  * The local calendar day of a Date, as "YYYY-MM-DD".
  * Callers (browser app, Action) produce `today` with this and pass it into
  * the pure modules — Date objects never cross the shared/ boundary.

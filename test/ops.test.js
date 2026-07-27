@@ -135,6 +135,29 @@ describe('applyOp — patchPlant', () => {
   });
 });
 
+describe('applyOp — setHouse', () => {
+  it('replaces the layout, idempotently, without touching other data', () => {
+    const data = { ...baseData(), house: { grid: { w: 24, h: 16 }, rooms: [] } };
+    const house = {
+      grid: { w: 24, h: 16 },
+      rooms: [{ id: 'kitchen', name: 'Kitchen', x: 0, y: 0, w: 6, h: 5 }],
+    };
+    const op = { type: 'setHouse', house };
+    const out = applyOp(data, op);
+    assert.equal(out.house.rooms.length, 1);
+    assert.equal(out.plants, data.plants);
+    assert.equal(out.events, data.events);
+    assert.equal(applyOp(out, op), out); // replay is a no-op
+    // the stored layout is a copy, not a live reference
+    house.rooms.push({ id: 'x', name: 'X', x: 0, y: 0, w: 1, h: 1 });
+    assert.equal(out.house.rooms.length, 1);
+  });
+
+  it('targets data/house.json', () => {
+    assert.equal(fileForOp({ type: 'setHouse' }), 'data/house.json');
+  });
+});
+
 describe('diffPlant', () => {
   it('produces a minimal field-level patch, never touching id', () => {
     const base = makePlant();

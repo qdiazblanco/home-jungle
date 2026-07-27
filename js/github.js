@@ -18,6 +18,7 @@ import { localTimestamp } from '../shared/dates.js';
 const API = 'https://api.github.com';
 export const PLANTS_PATH = 'data/plants.json';
 export const EVENTS_PATH = 'data/events.json';
+export const HOUSE_PATH = 'data/house.json';
 
 const QUEUE_KEY = 'digital-garden:queue';
 const MIRROR_KEY = 'digital-garden:mirror';
@@ -35,6 +36,7 @@ const CARE_PARAM_ORDER = [
   'toxic_to_pets',
 ];
 const EVENT_KEY_ORDER = ['id', 'plantId', 'type', 'date', 'author', 'note'];
+const ROOM_KEY_ORDER = ['id', 'name', 'x', 'y', 'w', 'h'];
 
 function orderKeys(obj, preferred) {
   const out = {};
@@ -76,10 +78,17 @@ function canonicalPlant(plant) {
 }
 
 export function serializeFile(path, data) {
-  const canonical =
-    path === PLANTS_PATH
-      ? data.map(canonicalPlant)
-      : data.map((ev) => orderKeys(ev, EVENT_KEY_ORDER));
+  let canonical;
+  if (path === PLANTS_PATH) {
+    canonical = data.map(canonicalPlant);
+  } else if (path === HOUSE_PATH) {
+    canonical = {
+      grid: { w: data?.grid?.w ?? 24, h: data?.grid?.h ?? 16 },
+      rooms: (data?.rooms ?? []).map((room) => orderKeys(room, ROOM_KEY_ORDER)),
+    };
+  } else {
+    canonical = data.map((ev) => orderKeys(ev, EVENT_KEY_ORDER));
+  }
   return JSON.stringify(canonical, null, 2) + '\n';
 }
 
@@ -445,29 +454,34 @@ async function writeBase(path) {
   const entry = mirrorEntry(path);
   if (entry?.sha) return { data: entry.data, sha: entry.sha };
   const fetched = await getFile(path);
-  if (!fetched) return { data: [], sha: null };
+  if (!fetched) return { data: path === HOUSE_PATH ? { grid: { w: 24, h: 16 }, rooms: [] } : [], sha: null };
   let data;
   try {
     data = JSON.parse(fetched.text);
   } catch {
     throw new ApiError('validation', `${path} on GitHub is not valid JSON — fix it before syncing.`);
   }
-  if (!Array.isArray(data)) {
-    throw new ApiError('validation', `${path} on GitHub is not an array — refusing to overwrite it.`);
+  const shapeOk =
+    path === HOUSE_PATH
+      ? data !== null && typeof data === 'object' && !Array.isArray(data)
+      : Array.isArray(data);
+  if (!shapeOk) {
+    throw new ApiError('validation', `${path} on GitHub has the wrong shape — refusing to overwrite it.`);
   }
   updateMirror(path, data, fetched.sha);
   return { data, sha: fetched.sha };
 }
 
 function applyBatch(path, baseData, batch) {
-  const other = path === PLANTS_PATH ? EVENTS_PATH : PLANTS_PATH;
-  const otherData = mirrorEntry(other)?.data ?? [];
-  let combined =
-    path === PLANTS_PATH
-      ? { plants: baseData, events: otherData }
-      : { plants: otherData, events: baseData };
+  let combined = {
+    plants: path === PLANTS_PATH ? baseData : mirrorEntry(PLANTS_PATH)?.data ?? [],
+    events: path === EVENTS_PATH ? baseData : mirrorEntry(EVENTS_PATH)?.data ?? [],
+    house: path === HOUSE_PATH ? baseData : mirrorEntry(HOUSE_PATH)?.data ?? null,
+  };
   for (const entry of batch) combined = applyOp(combined, entry.op);
-  return path === PLANTS_PATH ? combined.plants : combined.events;
+  if (path === PLANTS_PATH) return combined.plants;
+  if (path === HOUSE_PATH) return combined.house;
+  return combined.events;
 }
 
 async function flushBatch(path, batch) {
@@ -603,6 +617,8 @@ function commitMessage(batch) {
       subject = 'log: remove an entry';
     } else if (op.type === 'updateEvent') {
       subject = 'log: edit an entry';
+    } else if (op.type === 'setHouse') {
+      subject = 'house: update the floor plan';
     } else {
       subject = describeOp(op, byId);
     }

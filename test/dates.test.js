@@ -9,6 +9,8 @@ import {
   yearOf,
   todayString,
   localTimestamp,
+  monthGrid,
+  addMonths,
 } from '../shared/dates.js';
 
 describe('dayOf', () => {
@@ -74,6 +76,42 @@ describe('monthOf / yearOf', () => {
     assert.equal(monthOf('2026-10-01'), 10);
     assert.equal(monthOf('2026-01-31'), 1);
     assert.equal(yearOf('2026-10-01'), 2026);
+  });
+});
+
+describe('monthGrid', () => {
+  it('builds complete Monday-first weeks covering the month', () => {
+    // July 2026: the 1st is a Wednesday; 31 days → 5 weeks.
+    const grid = monthGrid(2026, 7);
+    assert.equal(grid.length, 5);
+    assert.ok(grid.every((week) => week.length === 7));
+    assert.equal(grid[0][0].day, '2026-06-29'); // Monday before the 1st
+    assert.equal(grid[0][0].inMonth, false);
+    assert.equal(grid[0][2].day, '2026-07-01');
+    assert.equal(grid[0][2].inMonth, true);
+    assert.equal(grid[4][6].day, '2026-08-02'); // trailing Sunday
+    assert.equal(grid[4][6].inMonth, false);
+    const inMonth = grid.flat().filter((c) => c.inMonth);
+    assert.equal(inMonth.length, 31);
+    assert.equal(inMonth[30].day, '2026-07-31');
+  });
+
+  it('handles a month starting on Monday and February in a leap year', () => {
+    // June 2026 starts on a Monday.
+    const june = monthGrid(2026, 6);
+    assert.equal(june[0][0].day, '2026-06-01');
+    // February 2027 (28 days, starts Monday) fits exactly 4 weeks.
+    const feb = monthGrid(2027, 2);
+    assert.equal(feb.length, 4);
+    assert.equal(feb.flat().filter((c) => c.inMonth).length, 28);
+  });
+});
+
+describe('addMonths', () => {
+  it('wraps across year boundaries in both directions', () => {
+    assert.deepEqual(addMonths(2026, 12, 1), { year: 2027, month: 1 });
+    assert.deepEqual(addMonths(2026, 1, -1), { year: 2025, month: 12 });
+    assert.deepEqual(addMonths(2026, 7, -19), { year: 2024, month: 12 });
   });
 });
 
