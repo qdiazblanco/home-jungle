@@ -1516,23 +1516,148 @@ code {
 .bp-legend__dot.bp-dot--overdue { background: var(--state-overdue); }
 .bp-legend__dot.bp-dot--unknown { background: var(--state-unknown); }
 
-/* compass */
+/* compass overlay (HTML — never clipped; turns with the dollhouse) */
 
-.bp-compass circle {
-  fill: var(--paper-raised);
-  stroke: var(--ink-soft);
-  stroke-width: 0.08;
+.map-compass {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 
-.bp-compass path {
-  fill: var(--terracotta);
+.map-compass__needle {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: block;
+  transition: transform 80ms linear;
 }
 
-.bp-compass text {
-  font-size: 0.6px;
+.map-compass__arrow {
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 9px solid var(--terracotta);
+}
+
+.map-compass__n {
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
   font-weight: 700;
-  fill: var(--ink);
-  font-family: var(--font-body);
+  color: var(--ink-soft);
+}
+
+.map-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* ---------- dollhouse (3D) ---------- */
+
+.d3-stage {
+  position: relative;
+  overflow: hidden;
+  perspective: 1150px;
+  touch-action: none;
+  cursor: grab;
+  border-radius: var(--radius-md);
+}
+
+.d3-stage:active {
+  cursor: grabbing;
+}
+
+.d3-scene {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  transform-style: preserve-3d;
+}
+
+.d3-scene > * {
+  position: absolute;
+}
+
+.d3-slab {
+  background: var(--paper-sunken);
+  border-radius: 6px;
+  box-shadow: 0 0 24px rgba(43, 51, 42, 0.28);
+}
+
+.d3-floor {
+  box-shadow: inset 0 0 0 1px rgba(43, 51, 42, 0.12);
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(43, 51, 42, 0.035) 0 1px,
+    transparent 1px 14px
+  );
+}
+
+.d3-label {
+  font-family: var(--font-display);
+  color: var(--ink-soft);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.d3-wall {
+  transform-origin: 0 0;
+  backface-visibility: visible;
+  background: #f3edda;
+  border-top: 1.5px solid rgba(43, 51, 42, 0.55);
+  border-bottom: 1px solid rgba(43, 51, 42, 0.25);
+  box-sizing: border-box;
+}
+
+.d3-wall--v {
+  background: #e4ddc8; /* fake side lighting */
+}
+
+.d3-wall--glass {
+  background: rgba(168, 195, 210, 0.4);
+  border-left: 1.5px solid #8fa6b4;
+  border-right: 1.5px solid #8fa6b4;
+  border-top-color: rgba(43, 51, 42, 0.45);
+}
+
+.d3-plant-anchor {
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+
+.d3-plant {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  display: block;
+  filter: drop-shadow(0 1px 1.5px rgba(43, 51, 42, 0.3));
+}
+
+.d3-plant svg {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
 /* hover / tap info card */

@@ -13,6 +13,7 @@ import { isGardener } from '../settings.js';
 import { el, icon, clear, snackbar, fmtRelativeDay } from '../ui.js';
 import { wateringStatus } from '../../shared/schedule.js';
 import { plantPhoto, stateChip } from '../components/plant-row.js';
+import { render3D, dollhouseRooms } from './map3d.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -38,11 +39,23 @@ const roomKey = (name) => String(name ?? '').trim().toLowerCase();
 
 const MIN_ROOM = 3;
 
+const MODE_KEY = 'digital-garden:map-view';
+
+// 'plan' (schematic, editable) | '3d' (dollhouse). Device-local preference.
+let viewMode = 'plan';
+try {
+  viewMode = localStorage.getItem(MODE_KEY) === '3d' ? '3d' : 'plan';
+} catch {
+  /* storage unavailable — default stands */
+}
+
 // Editor state survives store-driven re-renders (module-level draft).
 let editor = null; // { draft } | null
 let currentDraw = null; // latest draw() — drags must repaint the LIVE root
 let tip = null; // { el, plantId } — the hover/tap info card
 let tipHideTimer = null; // ONE timer for the card, owned by show/hide below
+let tipContainer = null; // the .bp-card the tip positions against
+let compassNeedle = null; // rotates with the dollhouse yaw
 
 if (typeof window !== 'undefined') {
   window.addEventListener('hashchange', () => {
@@ -104,43 +117,90 @@ function drawContent(root, draw) {
   }
   const placedKeys = new Set(rooms.map((room) => roomKey(room.name)));
 
-  /* ---- header ---- */
+  /* ---- header: view toggle + edit ---- */
+  const setMode = (mode) => {
+    viewMode = mode;
+    try {
+      localStorage.setItem(MODE_KEY, mode);
+    } catch {
+      /* preference only */
+    }
+    draw();
+  };
+  const openEditor = () => {
+    viewMode = 'plan'; // editing is a schematic affair
+    editor = {
+      draft: structuredClone({
+        ...layout,
+        grid: { ...layout?.grid, w: gridW, h: gridH },
+        rooms,
+      }),
+    };
+    draw();
+  };
+
   root.appendChild(
     el(
       'div',
       { class: 'section-title' },
       el('h1', {}, 'House map'),
-      canEdit && !editor
-        ? el(
-            'button',
-            {
-              class: 'btn btn--sm',
-              onclick: () => {
-                editor = {
-                  draft: structuredClone({
-                    ...layout,
-                    grid: { ...layout?.grid, w: gridW, h: gridH },
-                    rooms,
-                  }),
-                };
-                draw();
-              },
-            },
-            icon('edit'),
-            'Edit floor plan',
-          )
+      editor
+        ? el('span', { class: 'muted small' }, 'editing the floor plan')
         : el(
             'span',
-            { class: 'muted small' },
-            editor ? 'editing the floor plan' : 'the jungle, room by room',
+            { class: 'map-tools' },
+            el(
+              'span',
+              { class: 'segmented', role: 'group', 'aria-label': 'Map style' },
+              el(
+                'button',
+                { 'aria-pressed': String(viewMode === 'plan'), onclick: () => setMode('plan') },
+                'Plan',
+              ),
+              el(
+                'button',
+                { 'aria-pressed': String(viewMode === '3d'), onclick: () => setMode('3d') },
+                '3D',
+              ),
+            ),
+            canEdit
+              ? el('button', { class: 'btn btn--sm', onclick: openEditor }, icon('edit'), 'Edit')
+              : null,
           ),
     ),
   );
 
-  /* ---- the blueprint ---- */
+  /* ---- the blueprint / dollhouse ---- */
   const statusOf = (plant) => wateringStatus(plant, events, today, season);
   const boardCard = el('div', { class: 'card bp-card' });
-  boardCard.appendChild(renderBlueprint(boardCard, { gridW, gridH, rooms, byRoom, statusOf }));
+  tipContainer = boardCard;
+
+  if (viewMode === '3d' && !editor) {
+    render3D(boardCard, {
+      gridW,
+      gridH,
+      rooms: dollhouseRooms(rooms, byRoom, toneFor),
+      byRoom,
+      statusOf,
+      plantSprite: (plant, status) => makeSprite(plant, status),
+      onYaw: (yaw) => {
+        if (compassNeedle) compassNeedle.style.transform = `rotate(${yaw}deg)`;
+      },
+    });
+  } else {
+    boardCard.appendChild(renderBlueprint({ gridW, gridH, rooms, byRoom, statusOf }));
+  }
+
+  // Compass as an HTML overlay: never clipped, and it turns with the house.
+  compassNeedle = el(
+    'span',
+    { class: 'map-compass__needle', style: viewMode === '3d' ? '' : 'transform: rotate(0deg)' },
+    el('span', { class: 'map-compass__arrow' }),
+    el('span', { class: 'map-compass__n' }, 'N'),
+  );
+  boardCard.appendChild(
+    el('div', { class: 'map-compass', title: 'North' }, compassNeedle),
+  );
   root.appendChild(boardCard);
 
   /* ---- legend ---- */
@@ -202,8 +262,9 @@ function drawContent(root, draw) {
       el(
         'p',
         { class: 'small muted' },
-        'Hover a plant (or tap once) for its card; open it from there or with a second tap. ',
-        'Windows are drawn from each plant’s recorded orientation.',
+        viewMode === '3d'
+          ? 'Drag to turn the house. Hover a plant (or tap once) for its card; open it from there or with a second tap.'
+          : 'Hover a plant (or tap once) for its card; open it from there or with a second tap. Windows are drawn from each plant’s recorded orientation.',
       ),
     );
   }
@@ -219,10 +280,10 @@ function toneFor(id) {
   return FLOOR_TONES[Math.abs(hash) % FLOOR_TONES.length];
 }
 
-function renderBlueprint(container, { gridW, gridH, rooms, byRoom, statusOf }) {
+function renderBlueprint({ gridW, gridH, rooms, byRoom, statusOf }) {
   const board = svg('svg', {
     class: `bp${editor ? ' bp--editing' : ''}`,
-    viewBox: `-0.5 -1.9 ${gridW + 1} ${gridH + 2.6}`,
+    viewBox: `-0.5 -0.5 ${gridW + 1} ${gridH + 1}`,
     role: 'group',
     'aria-label': 'Floor plan of the house with plants placed in their rooms',
   });
@@ -258,20 +319,9 @@ function renderBlueprint(container, { gridW, gridH, rooms, byRoom, statusOf }) {
   // stroke must not paint over an earlier room's window on a shared wall.
   const windowLayer = svg('g', { class: 'bp-windows' });
   for (const room of rooms) {
-    board.appendChild(renderRoom(container, board, room, { gridW, gridH, byRoom, statusOf, windowLayer }));
+    board.appendChild(renderRoom(board, room, { gridW, gridH, byRoom, statusOf, windowLayer }));
   }
   board.appendChild(windowLayer);
-
-  // compass, floating above the top-right corner
-  board.appendChild(
-    svg(
-      'g',
-      { class: 'bp-compass', transform: `translate(${gridW - 0.9} -1.0)` },
-      svg('circle', { r: 0.75 }),
-      svg('path', { d: 'M0 0.42 L0.2 0.12 L0 -0.45 L-0.2 0.12 Z' }),
-      svg('text', { y: -0.62, 'text-anchor': 'middle' }, 'N'),
-    ),
-  );
 
   return board;
 }
@@ -304,7 +354,7 @@ function windowSegment(room, orientation) {
   return { x1: x, y1: cy - len / 2, x2: x, y2: cy + len / 2 };
 }
 
-function renderRoom(container, board, room, { gridW, gridH, byRoom, statusOf, windowLayer }) {
+function renderRoom(board, room, { gridW, gridH, byRoom, statusOf, windowLayer }) {
   const group = svg('g', { class: 'bp-room' });
   const rect = svg('rect', {
     class: `bp-room__rect ${toneFor(room.id ?? room.name)}`,
@@ -352,7 +402,7 @@ function renderRoom(container, board, room, { gridW, gridH, byRoom, statusOf, wi
     const rowIndex = Math.floor(index / cols);
     const cx = room.x + pad + 0.5 + col * step;
     const cy = Math.min(room.y + 1.9 + 0.6 + rowIndex * step, room.y + room.h - 0.8);
-    group.appendChild(renderPlantGlyph(container, plant, statusOf(plant), cx, cy));
+    group.appendChild(renderPlantGlyph(plant, statusOf(plant), cx, cy));
   });
   if (roomPlants.length > capacity) {
     group.appendChild(
@@ -421,7 +471,7 @@ function renderRoom(container, board, room, { gridW, gridH, byRoom, statusOf, wi
 
 /* ---------------- plant glyphs + info card ---------------- */
 
-function renderPlantGlyph(container, plant, status, cx, cy) {
+function renderPlantGlyph(plant, status, cx, cy) {
   const state = status?.state ?? 'unknown';
   const label = `${plant.name} — ${state === 'unknown' ? 'no log yet' : state}`;
 
@@ -449,7 +499,12 @@ function renderPlantGlyph(container, plant, status, cx, cy) {
     ...parts,
   );
 
-  /* hover (mouse) / first-tap (touch) info card */
+  wireTip(link, plant, status);
+  return link;
+}
+
+/** Hover (mouse) / first-tap (touch) / focus info-card wiring for a link. */
+function wireTip(link, plant, status) {
   let lastPointerType = 'mouse';
   // Chrome focuses a tapped link BEFORE click fires (its focus handler would
   // show the card and defeat the guard) — decide from pre-focus state.
@@ -460,21 +515,42 @@ function renderPlantGlyph(container, plant, status, cx, cy) {
     tipWasShown = tip?.plantId === plant.id;
   });
   link.addEventListener('pointerenter', (event) => {
-    if (event.pointerType === 'mouse') showTip(container, link, plant, status);
+    if (event.pointerType === 'mouse') showTip(tipContainer, link, plant, status);
   });
   link.addEventListener('pointerleave', (event) => {
     if (event.pointerType === 'mouse') scheduleTipHide();
   });
-  link.addEventListener('focus', () => showTip(container, link, plant, status));
+  link.addEventListener('focus', () => showTip(tipContainer, link, plant, status));
   link.addEventListener('blur', () => scheduleTipHide());
   link.addEventListener('click', (event) => {
     // Touch: first tap shows the card, second tap (or the card) opens.
     if (lastPointerType !== 'mouse' && !tipWasShown) {
       event.preventDefault();
-      showTip(container, link, plant, status);
+      showTip(tipContainer, link, plant, status);
     }
   });
+}
 
+/** Upright potted-plant sprite for the dollhouse (billboarded by map3d). */
+function makeSprite(plant, status) {
+  const state = status?.state ?? 'unknown';
+  const label = `${plant.name} — ${state === 'unknown' ? 'no log yet' : state}`;
+  const link = el('a', {
+    class: 'bp-plant',
+    href: `#/plant/${encodeURIComponent(plant.id)}`,
+    'aria-label': label,
+    title: label,
+  });
+  link.innerHTML =
+    `<svg viewBox="0 0 24 30" aria-hidden="true">` +
+    `<ellipse cx="12" cy="27.4" rx="7" ry="1.8" fill="rgba(43,51,42,0.2)"/>` +
+    `<path d="M6.5 16.5 L17.5 16.5 L15.8 24 L8.2 24 Z" fill="var(--terracotta)"/>` +
+    `<rect x="5.4" y="15" width="13.2" height="2.4" rx="0.8" fill="#b5654a"/>` +
+    `<circle class="bp-dot--${state}" cx="7.6" cy="10.6" r="4.4" stroke="rgba(43,51,42,0.25)" stroke-width="0.6"/>` +
+    `<circle class="bp-dot--${state}" cx="16.4" cy="10.6" r="4.4" stroke="rgba(43,51,42,0.25)" stroke-width="0.6"/>` +
+    `<circle class="bp-dot--${state}" cx="12" cy="5.6" r="4.9" stroke="rgba(43,51,42,0.25)" stroke-width="0.6"/>` +
+    `</svg>`;
+  wireTip(link, plant, status);
   return link;
 }
 

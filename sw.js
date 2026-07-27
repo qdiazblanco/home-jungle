@@ -32,6 +32,7 @@ const SHELL = [
   './js/views/wishlist.js',
   './js/views/calendar.js',
   './js/views/map.js',
+  './js/views/map3d.js',
   './js/slug.js',
   './js/components/sync-status.js',
   './js/components/warning-list.js',
