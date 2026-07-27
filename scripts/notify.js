@@ -20,7 +20,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { validateData } from '../shared/validate.js';
 import { getWarnings } from '../shared/warnings.js';
 import { todayString } from '../shared/dates.js';
-import { buildDigest } from '../shared/notify-digest.js';
+import { buildDigest, escapeTelegramHtml, clampLines } from '../shared/notify-digest.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? '';
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID ?? '';
@@ -65,10 +65,17 @@ async function main() {
   const today = todayString(); // workflow sets TZ=Europe/Madrid
   const { errors } = validateData(plants, events, { today });
   if (errors.length) {
-    const list = errors.map((e) => `- ${e.path}: ${e.message}`).join('\n');
-    console.error(`Data validation failed:\n${list}`);
+    const list = errors.map((e) => `- ${e.path}: ${e.message}`);
+    console.error(`Data validation failed:\n${list.join('\n')}`);
+    // Escape: validator messages embed raw data values, and an unescaped
+    // "<" would make Telegram reject the alert exactly when it matters.
     await sendTelegram(
-      `<b>Kipe's Home Jungle 🌿</b>\n\n⚠️ The garden data has a problem and notifications are paused:\n${list}`.slice(0, 4000),
+      clampLines(
+        ["<b>Kipe's Home Jungle 🌿</b>", '', '⚠️ The garden data has a problem and notifications are paused:'],
+        list.map((line) => escapeTelegramHtml(line)),
+        [],
+        3900,
+      ),
     );
     process.exit(1);
   }
@@ -82,14 +89,17 @@ async function main() {
     siteUrl: SITE_URL,
   });
 
-  await writeFile(STATE_FILE, JSON.stringify({ date: today, infoIds: digest.infoIds }, null, 2));
-
   if (!digest.send) {
+    await writeFile(STATE_FILE, JSON.stringify({ date: today, infoIds: digest.infoIds }, null, 2));
     console.log(`Nothing to report for ${today} — the jungle is content.`);
     return;
   }
 
-  await sendTelegram(digest.html.slice(0, 4000));
+  // Send FIRST, persist after: if the send fails, yesterday's state file
+  // survives (the cache re-saves it), so tomorrow retries the info notices
+  // instead of marking them delivered when they never were.
+  await sendTelegram(digest.html);
+  await writeFile(STATE_FILE, JSON.stringify({ date: today, infoIds: digest.infoIds }, null, 2));
   console.log(`Sent digest for ${today}:\n${digest.text}`);
 }
 

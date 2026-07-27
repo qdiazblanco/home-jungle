@@ -456,7 +456,11 @@ function findFamilyRoot(plant, plantsById) {
   return root;
 }
 
-function renderFamilyNode(node, plants, currentId) {
+function renderFamilyNode(node, plants, currentId, seen = new Set()) {
+  // Cycle guard: hand-edited data (or a mistaken parent pick in the form)
+  // can produce parent loops; render each family member at most once.
+  if (seen.has(node.id)) return null;
+  seen.add(node.id);
   const children = plants.filter((p) => p.parent === node.id);
   return el(
     'div',
@@ -474,7 +478,11 @@ function renderFamilyNode(node, plants, currentId) {
       node.acquired ? el('span', { class: 'small muted num' }, fmtDay(node.acquired, { withYear: 'always' })) : null,
     ),
     children.length
-      ? el('div', { class: 'tree-children' }, children.map((c) => renderFamilyNode(c, plants, currentId)))
+      ? el(
+          'div',
+          { class: 'tree-children' },
+          children.map((c) => renderFamilyNode(c, plants, currentId, seen)),
+        )
       : null,
   );
 }

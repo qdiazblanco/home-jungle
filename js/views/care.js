@@ -100,10 +100,15 @@ function drawContent(root, draw) {
       { class: 'section-title' },
       el('h1', {}, 'Care'),
       el(
-        'a',
-        { class: 'btn btn--ghost btn--sm', href: '#/map' },
-        icon('mapIcon'),
-        'By room',
+        'span',
+        { style: 'display:inline-flex;align-items:center;gap:0.75rem' },
+        el('span', { class: 'muted small' }, `${season} rhythm`),
+        el(
+          'a',
+          { class: 'btn btn--ghost btn--sm', href: '#/map' },
+          icon('mapIcon'),
+          'By room',
+        ),
       ),
     ),
   );

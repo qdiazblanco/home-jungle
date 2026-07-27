@@ -21,15 +21,46 @@ export function escapeTelegramHtml(text) {
 const BULLETS = { urgent: '❗', warn: '💧', info: 'ℹ️' };
 
 /**
+ * Join message lines, dropping trailing lines (the least severe — the list
+ * is sorted urgent→info) until the result fits the budget. Never cuts
+ * mid-line, so no HTML tag, entity or emoji surrogate pair is ever
+ * bisected — a raw slice would make Telegram reject the whole message.
+ */
+export function clampLines(head, lines, tail, budget) {
+  const assemble = (kept, dropped) =>
+    [
+      ...head,
+      ...kept,
+      ...(dropped > 0 ? [`… and ${dropped} more — everything is in the app.`] : []),
+      ...tail,
+    ].join('\n');
+
+  let kept = lines.length;
+  let message = assemble(lines, 0);
+  while (message.length > budget && kept > 1) {
+    kept -= 1;
+    message = assemble(lines.slice(0, kept), lines.length - kept);
+  }
+  return message;
+}
+
+/**
  * @param {object} input
  *   warnings        getWarnings() output
  *   plantsById      Map<id, plant>
  *   previousInfoIds string[] — info-warning ids already notified
  *   siteUrl         absolute URL of the deployed app (for the footer link)
+ *   budget          max message length (Telegram caps at 4096)
  * @returns {{ send, text, html, infoIds }}
  *   infoIds is the NEXT state to persist (all currently-firing info ids).
  */
-export function buildDigest({ warnings, plantsById, previousInfoIds = [], siteUrl = '' }) {
+export function buildDigest({
+  warnings,
+  plantsById,
+  previousInfoIds = [],
+  siteUrl = '',
+  budget = 3900,
+}) {
   const actionable = warnings.filter((w) => w.severity !== 'info');
   const info = warnings.filter((w) => w.severity === 'info');
   const freshInfo = info.filter((w) => !previousInfoIds.includes(w.id));
@@ -49,14 +80,19 @@ export function buildDigest({ warnings, plantsById, previousInfoIds = [], siteUr
   });
 
   const title = "Kipe's Home Jungle 🌿";
-  const text = [title, '', ...lines.map((l) => `${l.bullet} ${l.message}`)].join('\n');
+  const text = clampLines(
+    [title, ''],
+    lines.map((l) => `${l.bullet} ${l.message}`),
+    [],
+    budget,
+  );
 
-  const html = [
-    `<b>${escapeTelegramHtml(title)}</b>`,
-    '',
-    ...lines.map((l) => `${l.bullet} ${escapeTelegramHtml(l.message)}`),
-    ...(siteUrl ? ['', `<a href="${escapeTelegramHtml(siteUrl)}">Open the jungle</a>`] : []),
-  ].join('\n');
+  const html = clampLines(
+    [`<b>${escapeTelegramHtml(title)}</b>`, ''],
+    lines.map((l) => `${l.bullet} ${escapeTelegramHtml(l.message)}`),
+    siteUrl ? ['', `<a href="${escapeTelegramHtml(siteUrl)}">Open the jungle</a>`] : [],
+    budget,
+  );
 
   return { send: true, text, html, infoIds };
 }

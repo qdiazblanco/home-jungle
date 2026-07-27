@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDigest, escapeTelegramHtml } from '../shared/notify-digest.js';
+import { buildDigest, escapeTelegramHtml, clampLines } from '../shared/notify-digest.js';
 import { getWarnings } from '../shared/warnings.js';
 import { makePlant, makeEvent } from './fixtures.js';
 
@@ -77,6 +77,50 @@ describe('buildDigest', () => {
     assert.ok(!digest.html.includes('<b>Ficus'));
     assert.ok(digest.html.includes('&lt;b&gt;Ficus &amp; Sons&lt;/b&gt;'));
     assert.ok(digest.html.includes('href="https://example.github.io/home-jungle/"'));
+  });
+});
+
+describe('buildDigest — length budget (Telegram caps messages at 4096)', () => {
+  it('drops whole trailing lines, never bisecting a tag, entity or emoji', () => {
+    // A jungle of 60 overdue plants would overflow a raw 4000-char slice.
+    const plants = [];
+    const events = [];
+    for (let i = 0; i < 60; i++) {
+      const plant = makePlant({ id: `p-${i}`, name: `Extraordinarily thirsty specimen №${i} & co` });
+      plants.push(plant);
+      events.push(makeEvent({ plantId: plant.id, date: '2026-07-01T10:00:00' }));
+    }
+    const warnings = getWarnings({ plants, events, today: '2026-07-22' });
+    const digest = buildDigest({
+      warnings,
+      plantsById: new Map(plants.map((p) => [p.id, p])),
+      siteUrl: 'https://example.github.io/home-jungle/',
+    });
+    assert.ok(digest.html.length <= 3900, `html is ${digest.html.length} chars`);
+    assert.ok(digest.html.trimEnd().endsWith('</a>'), 'footer link stays intact');
+    assert.match(digest.html, /… and \d+ more — everything is in the app\./);
+    // No line was cut mid-way: every remaining warning line is complete.
+    for (const line of digest.html.split('\n')) {
+      assert.ok(!/&[a-z]*$/.test(line), `broken entity in: ${line.slice(-30)}`);
+    }
+  });
+
+  it('keeps short digests untouched', () => {
+    const { warnings, plantsById } = overdueSetup();
+    const digest = buildDigest({ warnings, plantsById, siteUrl: 'https://x.y/' });
+    assert.doesNotMatch(digest.html, /more — everything is in the app/);
+  });
+});
+
+describe('clampLines', () => {
+  it('joins under budget without a dropped-count line', () => {
+    assert.equal(clampLines(['t'], ['a', 'b'], ['f'], 100), 't\na\nb\nf');
+  });
+
+  it('drops from the tail and reports the count', () => {
+    const out = clampLines(['title'], ['line-1', 'line-2', 'line-3'], ['footer'], 30);
+    assert.match(out, /^title\nline-1\n… and 2 more/);
+    assert.ok(out.endsWith('footer'));
   });
 });
 

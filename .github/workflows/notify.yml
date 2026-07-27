@@ -38,11 +38,15 @@ jobs:
           restore-keys: |
             notify-state-
 
+      # github.repository is available on every trigger (schedule included),
+      # unlike event payload fields.
+      - name: Compute site URL
+        run: echo "SITE_URL=https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/" >> "$GITHUB_ENV"
+
       - name: Build and send the digest
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
         run: node scripts/notify.js
 
       - name: Save notification state
