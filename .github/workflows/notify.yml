@@ -1,0 +1,53 @@
+name: Daily care notifications
+
+on:
+  schedule:
+    # 06:00 UTC ≈ 08:00 Madrid in summer (07:00 in winter). Scheduled runs
+    # only fire on the default branch.
+    - cron: '0 6 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+env:
+  # Same-day semantics as the phones — shared/dates.js derives the calendar
+  # day from local time, and the dual-TZ test suite guarantees parity.
+  TZ: Europe/Madrid
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Dedup state for month-long info notices ("October is coming") so
+      # they fire once, not thirty times. Eviction is harmless: worst case
+      # a single repeated notice.
+      - name: Restore notification state
+        uses: actions/cache/restore@v4
+        with:
+          path: .notify-state.json
+          key: notify-state-${{ github.run_id }}
+          restore-keys: |
+            notify-state-
+
+      - name: Build and send the digest
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: node scripts/notify.js
+
+      - name: Save notification state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .notify-state.json
+          key: notify-state-${{ github.run_id }}
