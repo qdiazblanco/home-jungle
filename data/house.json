@@ -52,5 +52,49 @@
       "w": 10,
       "h": 6
     }
-  ]
+  ],
+  "furniture": [
+    {
+      "id": "lr-plant-table",
+      "roomId": "living-room",
+      "kind": "table",
+      "x": 6.5,
+      "y": 1,
+      "w": 3,
+      "h": 2
+    },
+    {
+      "id": "kitchen-sill",
+      "roomId": "kitchen",
+      "kind": "windowsill",
+      "x": 2.2,
+      "y": 6.2,
+      "w": 2.4,
+      "h": 0.7
+    },
+    {
+      "id": "studio-shelf",
+      "roomId": "studio",
+      "kind": "shelf",
+      "x": 3.6,
+      "y": 0.3,
+      "w": 3,
+      "h": 1
+    },
+    {
+      "id": "bath-stand",
+      "roomId": "bathroom",
+      "kind": "stand",
+      "x": 5.4,
+      "y": 3.2,
+      "w": 1.2,
+      "h": 1.2
+    }
+  ],
+  "placements": {
+    "bathroom-calathea": "bath-stand",
+    "kitchen-pothos": "kitchen-sill",
+    "living-room-monstera": "lr-plant-table",
+    "studio-snake-plant": "studio-shelf"
+  }
 }

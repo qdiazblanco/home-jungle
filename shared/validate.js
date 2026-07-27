@@ -23,6 +23,7 @@ export const EVENT_TYPES = [
   'photo',
 ];
 export const SUN_NEEDS = ['low', 'medium', 'high'];
+export const PLANT_ICONS = ['pot', 'bushy', 'tree', 'cactus', 'hanging'];
 
 /** Canonical care parameters — observed values for these are legitimate even
  * when the reference layer has no matching entry (the quick-edit sheet can
@@ -111,6 +112,13 @@ export function validateData(plants, events, opts = {}) {
           message: `Pot base (${b} cm) is wider than its top (${d} cm) — swapped values?`,
         });
       }
+    }
+
+    if (plant.icon != null && !PLANT_ICONS.includes(plant.icon)) {
+      issues.push({
+        path: `${where}.icon`,
+        message: `Icon "${plant.icon}" is not one of: ${PLANT_ICONS.join(', ')} — the default pot is shown instead.`,
+      });
     }
 
     if (plant.acquired != null && !dayOf(plant.acquired)) {

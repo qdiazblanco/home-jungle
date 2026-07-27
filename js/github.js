@@ -26,8 +26,8 @@ const MIRROR_KEY = 'digital-garden:mirror';
 /* ================= canonical serialization ================= */
 
 const PLANT_KEY_ORDER = [
-  'id', 'name', 'species', 'nickname', 'location', 'pot', 'photo', 'acquired',
-  'parent', 'care', 'general_notes', 'status',
+  'id', 'name', 'species', 'nickname', 'location', 'pot', 'photo', 'icon',
+  'acquired', 'parent', 'care', 'general_notes', 'status',
 ];
 const LOCATION_KEY_ORDER = ['room', 'orientation', 'detail'];
 const CARE_PARAM_ORDER = [
@@ -37,6 +37,7 @@ const CARE_PARAM_ORDER = [
 ];
 const EVENT_KEY_ORDER = ['id', 'plantId', 'type', 'date', 'author', 'note'];
 const ROOM_KEY_ORDER = ['id', 'name', 'x', 'y', 'w', 'h'];
+const FURNITURE_KEY_ORDER = ['id', 'roomId', 'kind', 'x', 'y', 'w', 'h'];
 
 function orderKeys(obj, preferred) {
   const out = {};
@@ -83,9 +84,16 @@ export function serializeFile(path, data) {
     canonical = data.map(canonicalPlant);
   } else if (path === HOUSE_PATH) {
     // Preserve unknown keys (hand-edits) like the other serializers do.
-    canonical = orderKeys(data ?? {}, ['grid', 'rooms']);
+    canonical = orderKeys(data ?? {}, ['grid', 'rooms', 'furniture', 'placements']);
     canonical.grid = orderKeys({ w: 24, h: 16, ...(data?.grid ?? {}) }, ['w', 'h']);
     canonical.rooms = (data?.rooms ?? []).map((room) => orderKeys(room, ROOM_KEY_ORDER));
+    canonical.furniture = (Array.isArray(data?.furniture) ? data.furniture : []).map((piece) =>
+      orderKeys(piece, FURNITURE_KEY_ORDER),
+    );
+    canonical.placements = orderKeys(
+      data?.placements && typeof data.placements === 'object' ? data.placements : {},
+      [],
+    );
   } else {
     canonical = data.map((ev) => orderKeys(ev, EVENT_KEY_ORDER));
   }

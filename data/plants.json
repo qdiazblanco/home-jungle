@@ -13,6 +13,7 @@
       "diameter_cm": 24
     },
     "photo": "img/living-room-monstera.svg",
+    "icon": "tree",
     "acquired": "2024-03-15",
     "parent": null,
     "care": {
@@ -65,6 +66,7 @@
       "diameter_cm": 15
     },
     "photo": "img/kitchen-pothos.svg",
+    "icon": "hanging",
     "acquired": "2023-11-02",
     "parent": null,
     "care": {
@@ -151,6 +153,7 @@
       "diameter_cm": 14
     },
     "photo": "img/bathroom-calathea.svg",
+    "icon": "bushy",
     "acquired": "2025-04-19",
     "parent": null,
     "care": {
@@ -202,6 +205,7 @@
       "diameter_cm": 22
     },
     "photo": "img/studio-snake-plant.svg",
+    "icon": "cactus",
     "acquired": "2022-09-30",
     "parent": null,
     "care": {

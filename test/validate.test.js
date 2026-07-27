@@ -95,6 +95,12 @@ describe('validateData — issues (render + banner)', () => {
     assert.match(messagesOf(issues), /future/);
   });
 
+  it('flags unknown plant icons (falls back to the default pot)', () => {
+    const { issues } = validateData([makePlant({ icon: 'gnome' })], []);
+    assert.match(messagesOf(issues), /Icon "gnome"/);
+    assert.equal(validateData([makePlant({ icon: 'hanging' })], []).issues.length, 0);
+  });
+
   it('flags authorless events and bad acquired dates', () => {
     const plant = makePlant({ acquired: 'spring 2024' });
     const { issues } = validateData([plant], [makeEvent({ author: '' })]);
