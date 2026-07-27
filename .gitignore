@@ -9,3 +9,5 @@ Thumbs.db
 
 # Just in case a dependency ever sneaks in
 node_modules/
+
+token.txt

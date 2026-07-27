@@ -33,16 +33,24 @@ diary.
 - **Installable** — manifest + service worker; loads fast and reads
   work offline.
 
+- **Daily notifications, still no backend** — a scheduled GitHub Action
+  reuses the same warnings module and sends a Telegram digest: thirsty
+  plants nag daily, seasonal notices fire once.
+- **Seasonal calendar** — the year month by month: feeding transitions,
+  repotting season, autumn light checks, protecting the humidity lovers.
+- **Propagation** — take a cutting from a plant's profile (event + linked
+  child in one step) and see the family tree.
+- **House map** — the collection room by room, with window orientations
+  and live watering urgency.
+- **Wishlist** — a dedicated view for plants not yet acquired, with a
+  celebratory "got it" flow when one comes home.
+
 Built with vanilla HTML/CSS/JS (native ES modules, zero dependencies,
 no build step). The scheduling and warning logic is a pure, fully
 tested module that runs identically in the browser and in Node.
 
 ## What it may do in the future
 
-- **Push notifications without a backend** — a daily GitHub Action that
-  reuses the same warnings module and notifies phones via ntfy.sh.
-- **Seasonal calendar** — a global "what's due this month" view.
-- **Propagation** — create cuttings from a mother plant and visualize
-  the family tree.
-- **House map** — a room-by-room diagram of where every plant lives.
-- **Wishlist** — a dedicated view for plants not yet acquired.
+- In-app photo capture and upload.
+- A dark variant of the botanical-notebook theme.
+- Native web-push notifications from the installed PWA itself.

@@ -99,7 +99,12 @@ function drawContent(root, draw) {
       'div',
       { class: 'section-title' },
       el('h1', {}, 'Care'),
-      el('span', { class: 'muted small' }, `${season} rhythm`),
+      el(
+        'a',
+        { class: 'btn btn--ghost btn--sm', href: '#/map' },
+        icon('mapIcon'),
+        'By room',
+      ),
     ),
   );
 

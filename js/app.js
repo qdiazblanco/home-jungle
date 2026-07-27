@@ -10,6 +10,9 @@ import * as care from './views/care.js';
 import * as plant from './views/plant.js';
 import * as plantForm from './views/plant-form.js';
 import * as settingsView from './views/settings-view.js';
+import * as wishlist from './views/wishlist.js';
+import * as calendar from './views/calendar.js';
+import * as houseMap from './views/map.js';
 
 const VIEWS = {
   today,
@@ -18,6 +21,9 @@ const VIEWS = {
   'plant-edit': plantForm,
   add: plantForm,
   settings: settingsView,
+  wishlist,
+  calendar,
+  map: houseMap,
 };
 
 // Form views manage their own inputs; re-rendering them on every store
@@ -38,6 +44,7 @@ function renderTabBar() {
   const tabs = [
     { href: '#/', label: 'Today', iconName: 'leaf', active: route.name === 'today' },
     { href: '#/care', label: 'Care', iconName: 'table', active: route.name === 'care' },
+    { href: '#/wishlist', label: 'Wishlist', iconName: 'star', active: route.name === 'wishlist' },
   ];
   if (isGardener()) {
     tabs.push({ href: '#/add', label: 'Add', iconName: 'plus', active: route.name === 'add' });

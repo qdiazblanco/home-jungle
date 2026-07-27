@@ -5,6 +5,8 @@ import * as store from '../store.js';
 import { isGardener } from '../settings.js';
 import { el, icon, clear } from '../ui.js';
 import { getWarnings } from '../../shared/warnings.js';
+import { monthTasks } from '../../shared/calendar.js';
+import { monthOf } from '../../shared/dates.js';
 import { wateringStatus, compareUrgency } from '../../shared/schedule.js';
 import { warningList } from '../components/warning-list.js';
 import { plantCard, wateringMeta } from '../components/plant-row.js';
@@ -67,6 +69,25 @@ function drawContent(root, draw) {
   /* ---- warnings panel ---- */
   const panel = warningList(getWarnings({ plants, events, today, season }), plantsById);
   if (panel) root.appendChild(panel);
+
+  /* ---- this-month teaser (seasonal calendar) ---- */
+  const tasks = monthTasks(monthOf(today), plants);
+  if (tasks.length) {
+    root.appendChild(
+      el(
+        'a',
+        { class: 'month-teaser', href: '#/calendar' },
+        icon('calendar'),
+        el(
+          'span',
+          { class: 'month-teaser__text' },
+          el('strong', {}, tasks[0].title),
+          el('span', { class: 'muted' }, ` — ${tasks[0].detail}`),
+        ),
+        el('span', { class: 'month-teaser__more small' }, 'month by month'),
+      ),
+    );
+  }
 
   /* ---- empty garden ---- */
   if (!active.length) {

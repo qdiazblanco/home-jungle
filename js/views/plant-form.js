@@ -16,6 +16,7 @@ import { PLANT_STATUSES, SUN_NEEDS } from '../../shared/validate.js';
 import { todayString } from '../../shared/dates.js';
 import { diffPlant } from '../../shared/ops.js';
 import { navigate } from '../router.js';
+import { uniquePlantId } from '../slug.js';
 
 const ORIENTATIONS = ['', 'north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
 
@@ -109,21 +110,7 @@ export function render(container, params, routeName) {
 
   /* ---------- id slug ---------- */
 
-  const slugify = (name) =>
-    name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-
-  const uniqueId = (name) => {
-    const baseSlug = slugify(name) || 'plant';
-    let slug = baseSlug;
-    let n = 2;
-    while (plantsById.has(slug)) slug = `${baseSlug}-${n++}`;
-    return slug;
-  };
+  const uniqueId = (name) => uniquePlantId(name, plantsById);
 
   const idPreview = el('code', {}, editing ? state.id : '(from the name)');
 

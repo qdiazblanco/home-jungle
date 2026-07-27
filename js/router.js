@@ -21,6 +21,9 @@ const ROUTES = [
   },
   { name: 'add', pattern: /^add$/, gardenerOnly: true, fallback: () => '#/' },
   { name: 'settings', pattern: /^settings$/ },
+  { name: 'wishlist', pattern: /^wishlist$/ },
+  { name: 'calendar', pattern: /^calendar$/ },
+  { name: 'map', pattern: /^map$/ },
 ];
 
 function normalize(hash) {

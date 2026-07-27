@@ -14,12 +14,16 @@ import {
   fmtDateTime,
   confirmDialog,
   showSheet,
+  formField,
 } from '../ui.js';
 import { effectiveCare } from '../../shared/effective-care.js';
 import { wateringStatus } from '../../shared/schedule.js';
 import { renderMarkdown } from '../../shared/markdown.js';
-import { dayOf } from '../../shared/dates.js';
+import { dayOf, todayString } from '../../shared/dates.js';
 import { plantPhoto, stateChip } from '../components/plant-row.js';
+import { ensureAuthor } from '../components/author-gate.js';
+import { uniquePlantId } from '../slug.js';
+import { navigate } from '../router.js';
 import { openCareEdit, QUICK_PARAMS } from '../components/care-edit-sheet.js';
 import { openEventDialog } from '../components/event-dialog.js';
 
@@ -132,25 +136,6 @@ function drawContent(root, id, draw) {
       'div',
       { class: 'card' },
       facts.map((f) => el('p', { class: 'small', style: 'margin-bottom:4px' }, f)),
-      parent
-        ? el(
-            'p',
-            { class: 'small', style: 'margin-bottom:4px' },
-            'cutting from ',
-            el('a', { href: `#/plant/${encodeURIComponent(parent.id)}` }, parent.name),
-          )
-        : null,
-      children.length
-        ? el(
-            'p',
-            { class: 'small', style: 'margin-bottom:0' },
-            'cuttings taken: ',
-            children.flatMap((child, i) => [
-              i ? ', ' : '',
-              el('a', { href: `#/plant/${encodeURIComponent(child.id)}` }, child.name),
-            ]),
-          )
-        : null,
     ),
   );
 
@@ -176,6 +161,12 @@ function drawContent(root, id, draw) {
           { class: 'btn', onclick: () => openEventDialog(plant, { type: 'note' }) },
           icon('note'),
           'Log event',
+        ),
+        el(
+          'button',
+          { class: 'btn', onclick: () => openCuttingSheet(plant) },
+          icon('cutting'),
+          'Cutting',
         ),
         el(
           'a',
@@ -298,6 +289,15 @@ function drawContent(root, id, draw) {
         ),
       ),
     );
+  }
+
+  /* ---------- family line (propagation) ---------- */
+
+  if (parent || children.length) {
+    root.appendChild(el('div', { class: 'section-title' }, el('h2', {}, 'Family line')));
+    const familyCard = el('div', { class: 'card' });
+    familyCard.appendChild(renderFamilyNode(findFamilyRoot(plant, plantsById), plants, plant.id));
+    root.appendChild(familyCard);
   }
 
   /* ---------- notes (markdown) ---------- */
@@ -438,6 +438,110 @@ function editNotes(plant, draw) {
           },
         },
         'Save notes',
+      ),
+    ),
+  );
+}
+
+/* ---------- propagation ---------- */
+
+/** Walk up the parent chain to the family's founding plant (cycle-safe). */
+function findFamilyRoot(plant, plantsById) {
+  let root = plant;
+  const seen = new Set([plant.id]);
+  while (root.parent && plantsById.has(root.parent) && !seen.has(root.parent)) {
+    root = plantsById.get(root.parent);
+    seen.add(root.id);
+  }
+  return root;
+}
+
+function renderFamilyNode(node, plants, currentId) {
+  const children = plants.filter((p) => p.parent === node.id);
+  return el(
+    'div',
+    { class: `tree-node${node.id === currentId ? ' tree-node--current' : ''}` },
+    el(
+      'div',
+      { class: 'tree-node__label' },
+      icon(node.parent ? 'cutting' : 'leaf'),
+      node.id === currentId
+        ? el('strong', {}, node.name)
+        : el('a', { href: `#/plant/${encodeURIComponent(node.id)}` }, node.name),
+      node.status !== 'active'
+        ? el('span', { class: `status-badge status-badge--${node.status}` }, node.status)
+        : null,
+      node.acquired ? el('span', { class: 'small muted num' }, fmtDay(node.acquired, { withYear: 'always' })) : null,
+    ),
+    children.length
+      ? el('div', { class: 'tree-children' }, children.map((c) => renderFamilyNode(c, plants, currentId)))
+      : null,
+  );
+}
+
+/** "Take a cutting": one flow logs the cutting event on the mother and
+ * creates the child plant with `parent` set and the mother's reference
+ * care copied over (observed starts empty — the child earns its own). */
+async function openCuttingSheet(mother) {
+  if (!(await ensureAuthor())) return;
+  const { plants, plantsById } = store.getSnapshot();
+  const rooms = [...new Set(plants.map((p) => p.location?.room).filter(Boolean))];
+
+  const { close, body } = showSheet({ title: `Take a cutting — ${mother.name}` });
+  const nameInput = el('input', { type: 'text', value: `${mother.name} cutting` });
+  const roomInput = el('input', { type: 'text', list: 'cutting-room-list', value: mother.location?.room ?? '' });
+  const noteInput = el('input', { type: 'text', placeholder: 'Optional note (node count, method…)' });
+
+  body.append(
+    el('p', { class: 'small muted' },
+      'Logs a cutting event on the mother and creates the child plant, linked as family.'),
+    formField('Child plant name', nameInput),
+    formField('Room', el('span', {},
+      roomInput,
+      el('datalist', { id: 'cutting-room-list' }, rooms.map((r) => el('option', { value: r }))),
+    )),
+    formField('Note', noteInput),
+    el(
+      'div',
+      { class: 'sheet__actions' },
+      el('button', { class: 'btn', onclick: () => close() }, 'Cancel'),
+      el(
+        'button',
+        {
+          class: 'btn btn--primary',
+          onclick: () => {
+            const name = nameInput.value.trim() || `${mother.name} cutting`;
+            const id = uniquePlantId(name, plantsById);
+            const today = todayString();
+            const child = {
+              id,
+              name,
+              species: mother.species ?? '',
+              nickname: null,
+              location: {
+                room: roomInput.value.trim() || mother.location?.room || '',
+                orientation: '',
+                detail: '',
+              },
+              photo: null,
+              acquired: today,
+              parent: mother.id,
+              care: {
+                reference: structuredClone(mother.care?.reference ?? {}),
+                observed: {},
+              },
+              general_notes: `Cutting taken from ${mother.name}.`,
+              status: 'active',
+            };
+            store.createPlant(child);
+            store.logEvent(mother.id, 'cutting', {
+              note: noteInput.value.trim() || `Cutting taken → ${name}`,
+            });
+            close();
+            navigate(`#/plant/${encodeURIComponent(id)}`);
+          },
+        },
+        'Take the cutting ✂️',
       ),
     ),
   );
