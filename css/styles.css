@@ -1444,6 +1444,10 @@ code {
   stroke-dasharray: 0.4 0.25;
 }
 
+.bp-windows {
+  pointer-events: none; /* decorative layer above rooms */
+}
+
 .bp-window__gap {
   stroke: var(--paper-raised);
   stroke-width: 0.3;

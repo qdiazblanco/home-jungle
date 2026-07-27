@@ -42,6 +42,7 @@ const MIN_ROOM = 3;
 let editor = null; // { draft } | null
 let currentDraw = null; // latest draw() — drags must repaint the LIVE root
 let tip = null; // { el, plantId } — the hover/tap info card
+let tipHideTimer = null; // ONE timer for the card, owned by show/hide below
 
 if (typeof window !== 'undefined') {
   window.addEventListener('hashchange', () => {
@@ -50,7 +51,18 @@ if (typeof window !== 'undefined') {
   });
 }
 
+function cancelTipHide() {
+  if (tipHideTimer) clearTimeout(tipHideTimer);
+  tipHideTimer = null;
+}
+
+function scheduleTipHide() {
+  cancelTipHide();
+  tipHideTimer = setTimeout(hideTip, 140);
+}
+
 function hideTip() {
+  cancelTipHide();
   tip?.el.remove();
   tip = null;
 }
@@ -58,6 +70,10 @@ function hideTip() {
 export function render(container) {
   const root = el('div');
   container.appendChild(root);
+  // A tap anywhere in the view that is not a plant or the card dismisses it.
+  root.addEventListener('pointerdown', (event) => {
+    if (!event.target.closest('.bp-plant, .bp-tip')) hideTip();
+  });
   const draw = () => {
     hideTip();
     clear(root);
@@ -125,10 +141,6 @@ function drawContent(root, draw) {
   const statusOf = (plant) => wateringStatus(plant, events, today, season);
   const boardCard = el('div', { class: 'card bp-card' });
   boardCard.appendChild(renderBlueprint(boardCard, { gridW, gridH, rooms, byRoom, statusOf }));
-  // A tap anywhere that is not a plant or the card dismisses the info card.
-  boardCard.addEventListener('pointerdown', (event) => {
-    if (!event.target.closest('.bp-plant, .bp-tip')) hideTip();
-  });
   root.appendChild(boardCard);
 
   /* ---- legend ---- */
@@ -242,9 +254,13 @@ function renderBlueprint(container, { gridW, gridH, rooms, byRoom, statusOf }) {
   board.appendChild(svg('rect', { class: 'bp-slab', x: -0.25, y: -0.25, width: gridW + 0.5, height: gridH + 0.5, rx: 0.35, filter: 'url(#bp-shadow)' }));
   board.appendChild(svg('rect', { class: 'bp-walls', x: 0, y: 0, width: gridW, height: gridH }));
 
+  // Windows render in a layer ABOVE all rooms — a later-drawn room's wall
+  // stroke must not paint over an earlier room's window on a shared wall.
+  const windowLayer = svg('g', { class: 'bp-windows' });
   for (const room of rooms) {
-    board.appendChild(renderRoom(container, board, room, { gridW, gridH, byRoom, statusOf }));
+    board.appendChild(renderRoom(container, board, room, { gridW, gridH, byRoom, statusOf, windowLayer }));
   }
+  board.appendChild(windowLayer);
 
   // compass, floating above the top-right corner
   board.appendChild(
@@ -288,7 +304,7 @@ function windowSegment(room, orientation) {
   return { x1: x, y1: cy - len / 2, x2: x, y2: cy + len / 2 };
 }
 
-function renderRoom(container, board, room, { gridW, gridH, byRoom, statusOf }) {
+function renderRoom(container, board, room, { gridW, gridH, byRoom, statusOf, windowLayer }) {
   const group = svg('g', { class: 'bp-room' });
   const rect = svg('rect', {
     class: `bp-room__rect ${toneFor(room.id ?? room.name)}`,
@@ -317,8 +333,8 @@ function renderRoom(container, board, room, { gridW, gridH, byRoom, statusOf }) 
   for (const orientation of orientations) {
     const seg = windowSegment(room, orientation);
     if (!seg) continue;
-    group.appendChild(svg('line', { class: 'bp-window__gap', ...seg }));
-    group.appendChild(svg('line', { class: 'bp-window__glass', ...seg }));
+    windowLayer.appendChild(svg('line', { class: 'bp-window__gap', ...seg }));
+    windowLayer.appendChild(svg('line', { class: 'bp-window__glass', ...seg }));
   }
 
   group.appendChild(
@@ -335,7 +351,7 @@ function renderRoom(container, board, room, { gridW, gridH, byRoom, statusOf }) 
     const col = index % cols;
     const rowIndex = Math.floor(index / cols);
     const cx = room.x + pad + 0.5 + col * step;
-    const cy = room.y + 1.9 + 0.6 + rowIndex * step;
+    const cy = Math.min(room.y + 1.9 + 0.6 + rowIndex * step, room.y + room.h - 0.8);
     group.appendChild(renderPlantGlyph(container, plant, statusOf(plant), cx, cy));
   });
   if (roomPlants.length > capacity) {
@@ -435,42 +451,35 @@ function renderPlantGlyph(container, plant, status, cx, cy) {
 
   /* hover (mouse) / first-tap (touch) info card */
   let lastPointerType = 'mouse';
-  let hideTimer = null;
-  const scheduleHide = () => {
-    hideTimer = setTimeout(() => hideTip(), 140);
-  };
-  const cancelHide = () => {
-    if (hideTimer) clearTimeout(hideTimer);
-    hideTimer = null;
-  };
+  // Chrome focuses a tapped link BEFORE click fires (its focus handler would
+  // show the card and defeat the guard) — decide from pre-focus state.
+  let tipWasShown = false;
 
   link.addEventListener('pointerdown', (event) => {
     lastPointerType = event.pointerType || 'mouse';
+    tipWasShown = tip?.plantId === plant.id;
   });
   link.addEventListener('pointerenter', (event) => {
-    if (event.pointerType === 'mouse') {
-      cancelHide();
-      showTip(container, link, plant, status);
-    }
+    if (event.pointerType === 'mouse') showTip(container, link, plant, status);
   });
   link.addEventListener('pointerleave', (event) => {
-    if (event.pointerType === 'mouse') scheduleHide();
+    if (event.pointerType === 'mouse') scheduleTipHide();
   });
   link.addEventListener('focus', () => showTip(container, link, plant, status));
-  link.addEventListener('blur', () => scheduleHide());
+  link.addEventListener('blur', () => scheduleTipHide());
   link.addEventListener('click', (event) => {
     // Touch: first tap shows the card, second tap (or the card) opens.
-    if (lastPointerType !== 'mouse' && tip?.plantId !== plant.id) {
+    if (lastPointerType !== 'mouse' && !tipWasShown) {
       event.preventDefault();
       showTip(container, link, plant, status);
     }
   });
-  link.tipHooks = { cancelHide, scheduleHide };
 
   return link;
 }
 
 function showTip(container, anchor, plant, status) {
+  cancelTipHide();
   if (tip?.plantId === plant.id) return;
   hideTip();
 
@@ -494,8 +503,8 @@ function showTip(container, anchor, plant, status) {
       el('span', { class: 'small muted' }, meta.join(' · ')),
     ),
   );
-  card.addEventListener('pointerenter', () => anchor.tipHooks?.cancelHide());
-  card.addEventListener('pointerleave', () => anchor.tipHooks?.scheduleHide());
+  card.addEventListener('pointerenter', cancelTipHide);
+  card.addEventListener('pointerleave', scheduleTipHide);
 
   // Position above the glyph, clamped inside the board card.
   card.style.visibility = 'hidden';
