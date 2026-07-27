@@ -1253,10 +1253,27 @@ code {
   background: var(--leaf-tint);
 }
 
-@media (max-width: 22.5rem) {
-  .brand span,
-  .brand {
-    font-size: var(--text-md);
+.brand {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.brand span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 26rem) {
+  .brand span {
+    display: none; /* leaf icon + nav + chip fit one row on small phones */
+  }
+
+  .cal-nav__label {
+    font-size: var(--text-sm);
+  }
+
+  .section-title {
+    flex-wrap: wrap;
   }
 }
 
@@ -1377,7 +1394,15 @@ code {
   width: 100%;
   height: auto;
   display: block;
-  touch-action: none;
+}
+
+.bp--editing {
+  touch-action: none; /* editing owns the gestures; view mode scrolls freely */
+}
+
+/* While editing, room surfaces own the pointer — dots must not steal grabs. */
+.bp--editing .bp-plant {
+  pointer-events: none;
 }
 
 .bp-walls {

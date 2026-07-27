@@ -154,7 +154,12 @@ export async function load() {
       if (Array.isArray(plants) && Array.isArray(events)) {
         gh.updateMirror(gh.PLANTS_PATH, plants, plantsFile?.sha ?? null);
         gh.updateMirror(gh.EVENTS_PATH, events, eventsFile?.sha ?? null);
-        if (houseFile) gh.updateMirror(gh.HOUSE_PATH, normalizeHouse(house), houseFile.sha ?? null);
+        // Mirror only a valid shape: a broken upstream file must NOT be
+        // paired with its real sha, or writeBase would silently overwrite
+        // it instead of refusing (display still degrades via normalizeHouse).
+        const houseValid =
+          house && typeof house === 'object' && !Array.isArray(house) && Array.isArray(house.rooms);
+        if (houseFile && houseValid) gh.updateMirror(gh.HOUSE_PATH, house, houseFile.sha ?? null);
         adopt(plants, events, 'api', house);
         gh.scheduleFlush(500); // drain anything queued from a previous session
         return;
@@ -202,7 +207,7 @@ export async function load() {
       gh.updateMirror(gh.EVENTS_PATH, events, null);
       if (house) gh.updateMirror(gh.HOUSE_PATH, normalizeHouse(house), null);
     }
-    adopt(plants, events, 'pages', house);
+    adopt(plants, events, 'pages', house ?? gh.mirrorEntry(gh.HOUSE_PATH)?.data);
   } catch (err) {
     if (mirrorPlants && mirrorEvents) {
       adopt(mirrorPlants.data, mirrorEvents.data, 'mirror', gh.mirrorEntry(gh.HOUSE_PATH)?.data);

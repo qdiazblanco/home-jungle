@@ -36,6 +36,7 @@ const MIN_ROOM = 3;
 
 // Editor state survives store-driven re-renders (module-level draft).
 let editor = null; // { draft } | null
+let currentDraw = null; // latest draw() — drags must repaint the LIVE root
 
 if (typeof window !== 'undefined') {
   window.addEventListener('hashchange', () => {
@@ -50,6 +51,7 @@ export function render(container) {
     clear(root);
     drawContent(root, draw);
   };
+  currentDraw = draw;
   draw();
 }
 
@@ -86,7 +88,7 @@ function drawContent(root, draw) {
             {
               class: 'btn btn--sm',
               onclick: () => {
-                editor = { draft: structuredClone({ grid: { w: gridW, h: gridH }, rooms }) };
+                editor = { draft: structuredClone({ ...layout, grid: { ...layout?.grid, w: gridW, h: gridH }, rooms }) };
                 draw();
               },
             },
@@ -178,7 +180,7 @@ function renderBlueprint({ gridW, gridH, rooms, byRoom, statusOf, draw }) {
   const board = svg('svg', {
     class: `bp${editor ? ' bp--editing' : ''}`,
     viewBox: `-0.3 -0.3 ${gridW + 0.6} ${gridH + 0.6}`,
-    role: 'img',
+    role: 'group',
     'aria-label': 'Floor plan of the house with plants placed in their rooms',
   });
 
@@ -221,18 +223,20 @@ function renderRoom(board, room, { gridW, gridH, byRoom, statusOf, draw }) {
     const cx = room.x + pad + 0.35 + col * step;
     const cy = room.y + 1.6 + 0.35 + rowIndex * step;
     const state = statusOf(plant)?.state ?? 'unknown';
-    const dot = svg(
-      'g',
-      {
-        class: 'bp-plant',
-        onclick: () => {
-          if (!editor) window.location.hash = `#/plant/${encodeURIComponent(plant.id)}`;
-        },
-      },
+    const label = `${plant.name} — ${state === 'unknown' ? 'no log yet' : state}`;
+    const parts = [
       svg('circle', { class: 'bp-plant__hit', cx, cy, r: 0.62 }),
       svg('circle', { class: `bp-plant__dot bp-dot--${state}`, cx, cy, r: 0.42 }),
-      svg('title', {}, `${plant.name} — ${state === 'unknown' ? 'no log yet' : state}`),
-    );
+      svg('title', {}, label),
+    ];
+    // View mode: a real (focusable, announced) SVG link. Edit mode: inert.
+    const dot = editor
+      ? svg('g', { class: 'bp-plant' }, ...parts)
+      : svg(
+          'a',
+          { class: 'bp-plant', href: `#/plant/${encodeURIComponent(plant.id)}`, 'aria-label': label },
+          ...parts,
+        );
     group.appendChild(dot);
   });
   if (roomPlants.length > capacity) {
@@ -248,11 +252,15 @@ function renderRoom(board, room, { gridW, gridH, byRoom, statusOf, draw }) {
   /* editor affordances */
   if (editor) {
     const draftRoom = editor.draft.rooms.find((r) => r.id === room.id);
+    // In edit mode `room` IS draftRoom (same object) — snapshot the render-time
+    // geometry so cumulative pointer deltas apply to a fixed base, never to
+    // values the previous pointermove already mutated.
+    const start = { x: room.x, y: room.y, w: room.w, h: room.h };
     attachDrag(board, rect, (dx, dy) => {
-      draftRoom.x = clamp(Math.round(room.x + dx), 0, gridW - draftRoom.w);
-      draftRoom.y = clamp(Math.round(room.y + dy), 0, gridH - draftRoom.h);
-      group.setAttribute('transform', `translate(${draftRoom.x - room.x} ${draftRoom.y - room.y})`);
-    }, draw);
+      draftRoom.x = clamp(Math.round(start.x + dx), 0, gridW - draftRoom.w);
+      draftRoom.y = clamp(Math.round(start.y + dy), 0, gridH - draftRoom.h);
+      group.setAttribute('transform', `translate(${draftRoom.x - start.x} ${draftRoom.y - start.y})`);
+    });
 
     const handle = svg('rect', {
       class: 'bp-room__resize',
@@ -262,13 +270,13 @@ function renderRoom(board, room, { gridW, gridH, byRoom, statusOf, draw }) {
       height: 0.8,
     });
     attachDrag(board, handle, (dx, dy) => {
-      draftRoom.w = clamp(Math.round(room.w + dx), MIN_ROOM, gridW - draftRoom.x);
-      draftRoom.h = clamp(Math.round(room.h + dy), MIN_ROOM, gridH - draftRoom.y);
+      draftRoom.w = clamp(Math.round(start.w + dx), MIN_ROOM, gridW - draftRoom.x);
+      draftRoom.h = clamp(Math.round(start.h + dy), MIN_ROOM, gridH - draftRoom.y);
       rect.setAttribute('width', draftRoom.w);
       rect.setAttribute('height', draftRoom.h);
       handle.setAttribute('x', draftRoom.x + draftRoom.w - 0.8);
       handle.setAttribute('y', draftRoom.y + draftRoom.h - 0.8);
-    }, draw);
+    });
     group.appendChild(handle);
 
     group.appendChild(
@@ -297,22 +305,32 @@ function renderRoom(board, room, { gridW, gridH, byRoom, statusOf, draw }) {
 
 const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), hi);
 
-/** Pointer-drag in grid units; full redraw on release. */
-function attachDrag(board, node, onMove, draw) {
+/** Pointer-drag in grid units; full redraw (of the LIVE root) on release. */
+function attachDrag(board, node, onMove) {
   node.addEventListener('pointerdown', (event) => {
     event.preventDefault();
     event.stopPropagation();
+    try {
+      node.setPointerCapture(event.pointerId);
+    } catch {
+      /* capture is best-effort */
+    }
     const startX = event.clientX;
     const startY = event.clientY;
     const scale = board.getBoundingClientRect().width / (board.viewBox.baseVal.width || 1);
-    const move = (ev) => onMove((ev.clientX - startX) / scale, (ev.clientY - startY) / scale);
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
-      draw();
+      window.removeEventListener('pointercancel', up);
+      currentDraw?.();
+    };
+    const move = (ev) => {
+      if (ev.buttons === 0) return up(); // missed pointerup (window lost focus)
+      onMove((ev.clientX - startX) / scale, (ev.clientY - startY) / scale);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   });
 }
 
@@ -355,8 +373,12 @@ function renderEditorControls(root, { gridW, gridH, byRoom, draw }) {
                 snackbar({ message: `${name} is already on the plan.` });
                 return;
               }
+              const slug = roomKey(name).replace(/[^a-z0-9]+/g, '-') || 'room';
+              let id = slug;
+              let n = 2;
+              while (editor.draft.rooms.some((room) => room.id === id)) id = `${slug}-${n++}`;
               editor.draft.rooms.push({
-                id: `${roomKey(name).replace(/[^a-z0-9]+/g, '-')}-${editor.draft.rooms.length + 1}`,
+                id,
                 name,
                 ...findFreeSpot(editor.draft.rooms, gridW, gridH),
               });

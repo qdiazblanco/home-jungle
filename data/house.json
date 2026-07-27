@@ -1,11 +1,56 @@
 {
-  "grid": { "w": 24, "h": 16 },
+  "grid": {
+    "w": 24,
+    "h": 16
+  },
   "rooms": [
-    { "id": "living-room", "name": "Living room", "x": 0, "y": 0, "w": 10, "h": 10 },
-    { "id": "kitchen", "name": "Kitchen", "x": 10, "y": 0, "w": 7, "h": 7 },
-    { "id": "studio", "name": "Studio", "x": 17, "y": 0, "w": 7, "h": 7 },
-    { "id": "bathroom", "name": "Bathroom", "x": 10, "y": 7, "w": 7, "h": 5 },
-    { "id": "bedroom", "name": "Bedroom", "x": 17, "y": 7, "w": 7, "h": 9 },
-    { "id": "hall", "name": "Hall", "x": 0, "y": 10, "w": 10, "h": 6 }
+    {
+      "id": "living-room",
+      "name": "Living room",
+      "x": 0,
+      "y": 0,
+      "w": 10,
+      "h": 10
+    },
+    {
+      "id": "kitchen",
+      "name": "Kitchen",
+      "x": 10,
+      "y": 0,
+      "w": 7,
+      "h": 7
+    },
+    {
+      "id": "studio",
+      "name": "Studio",
+      "x": 17,
+      "y": 0,
+      "w": 7,
+      "h": 7
+    },
+    {
+      "id": "bathroom",
+      "name": "Bathroom",
+      "x": 10,
+      "y": 7,
+      "w": 7,
+      "h": 5
+    },
+    {
+      "id": "bedroom",
+      "name": "Bedroom",
+      "x": 17,
+      "y": 7,
+      "w": 7,
+      "h": 9
+    },
+    {
+      "id": "hall",
+      "name": "Hall",
+      "x": 0,
+      "y": 10,
+      "w": 10,
+      "h": 6
+    }
   ]
 }

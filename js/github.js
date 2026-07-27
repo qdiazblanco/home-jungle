@@ -82,10 +82,10 @@ export function serializeFile(path, data) {
   if (path === PLANTS_PATH) {
     canonical = data.map(canonicalPlant);
   } else if (path === HOUSE_PATH) {
-    canonical = {
-      grid: { w: data?.grid?.w ?? 24, h: data?.grid?.h ?? 16 },
-      rooms: (data?.rooms ?? []).map((room) => orderKeys(room, ROOM_KEY_ORDER)),
-    };
+    // Preserve unknown keys (hand-edits) like the other serializers do.
+    canonical = orderKeys(data ?? {}, ['grid', 'rooms']);
+    canonical.grid = orderKeys({ w: 24, h: 16, ...(data?.grid ?? {}) }, ['w', 'h']);
+    canonical.rooms = (data?.rooms ?? []).map((room) => orderKeys(room, ROOM_KEY_ORDER));
   } else {
     canonical = data.map((ev) => orderKeys(ev, EVENT_KEY_ORDER));
   }
