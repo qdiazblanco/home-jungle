@@ -305,14 +305,17 @@ export function render3D(host, { gridW, gridH, rooms, model, statusOf, plantSpri
   stage.addEventListener('pointermove', (event) => {
     if (!pointers.has(event.pointerId)) return;
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    // Missed-pointerup eviction, for EVERY gesture kind: a mouse/pen whose
+    // release was lost (window lost focus) would otherwise haunt the Map as
+    // a frozen pinch partner. Touch is exempt — its moves report buttons 1
+    // and its loss always fires pointercancel.
+    if (event.pointerType !== 'touch' && event.buttons === 0) {
+      pointers.delete(event.pointerId);
+      beginGesture();
+      return;
+    }
     if (!gesture) return;
     if (gesture.kind === 'orbit') {
-      if (event.pointerType === 'mouse' && event.buttons === 0) {
-        // missed pointerup (window lost focus mid-drag)
-        pointers.delete(event.pointerId);
-        beginGesture();
-        return;
-      }
       // yaw stays continuous (no wrapping): the compass needle transitions,
       // and a ±360° jump would spin it a full backwards turn. Negative dx
       // factor = "grab the house": drag right, house turns right.
@@ -330,12 +333,17 @@ export function render3D(host, { gridW, gridH, rooms, model, statusOf, plantSpri
   };
   stage.addEventListener('pointerup', releasePointer);
   stage.addEventListener('pointercancel', releasePointer);
+  stage.addEventListener('lostpointercapture', releasePointer); // idempotent
 
   stage.addEventListener(
     'wheel',
     (event) => {
       event.preventDefault(); // the stage owns the scroll gesture
-      setZoom(orbit.zoom * Math.exp(-event.deltaY * 0.0012));
+      // deltaMode first (Firefox exposes matching values), then normalize
+      // line/page deltas to pixel scale so notches feel identical everywhere.
+      const mode = event.deltaMode;
+      const dy = mode === 1 ? event.deltaY * 33 : mode === 2 ? event.deltaY * 300 : event.deltaY;
+      setZoom(orbit.zoom * Math.exp(-dy * 0.0012));
     },
     { passive: false },
   );
