@@ -272,6 +272,50 @@ export async function putBinaryFile(path, buffer, message) {
   return { sha: json.content?.sha };
 }
 
+/** Git blob sha ("blob <len>\0" + bytes, SHA-1) of raw bytes. */
+async function gitBlobSha(buffer) {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  const header = new TextEncoder().encode(`blob ${bytes.length}\0`);
+  const all = new Uint8Array(header.length + bytes.length);
+  all.set(header);
+  all.set(bytes, header.length);
+  const digest = await crypto.subtle.digest('SHA-1', all);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Contents-API sha of a path, or null when it does not exist. */
+async function getFileSha(path) {
+  const { owner, repo, branch } = coordsOrThrow();
+  try {
+    const res = await apiFetch(
+      `/repos/${owner}/${repo}/contents/${path}?ref=${encodeURIComponent(branch)}`,
+    );
+    return (await res.json()).sha ?? null;
+  } catch (err) {
+    if (err.kind === 'not-found') return null;
+    throw err;
+  }
+}
+
+/**
+ * putBinaryFile that resolves the lost-response case (the photo analogue of
+ * the data files' idempotent replay): on a conflict, if the existing file
+ * already holds these exact bytes the earlier PUT landed and this is a
+ * retry — report success instead of letting the caller duplicate the blob
+ * under a bumped filename. Returns { existed } so callers can tell.
+ */
+export async function putBinaryFileIfAbsent(path, buffer, message) {
+  try {
+    await putBinaryFile(path, buffer, message);
+    return { existed: false };
+  } catch (err) {
+    if (err.kind !== 'conflict') throw err;
+    const remoteSha = await getFileSha(path);
+    if (remoteSha && remoteSha === (await gitBlobSha(buffer))) return { existed: true };
+    throw err; // genuinely different file (the other phone) — caller bumps
+  }
+}
+
 /**
  * Cheap authenticated probe used by Settings to validate a token.
  * Pass { token } to probe a CANDIDATE token before it is saved — a bad

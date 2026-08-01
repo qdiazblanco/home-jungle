@@ -977,6 +977,17 @@ textarea {
   object-fit: cover;
 }
 
+/* not-yet-published photo (committed, Pages still deploying) */
+.photo-grid__missing {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--leaf);
+  background: var(--leaf-tint);
+}
+
 .photo-preview img,
 .photo-view img {
   width: 100%;
@@ -1551,7 +1562,8 @@ code {
   stroke-dasharray: 0.25 0.18;
 }
 
-/* potted-plant glyphs */
+/* potted-plant glyphs — the glyph art itself lives in iconMarkup()
+   (js/views/map.js) and reads theme tokens via inline var() fills. */
 
 .bp-plant {
   cursor: pointer;
@@ -1561,27 +1573,17 @@ code {
   fill: transparent;
 }
 
-.bp-plant__shadow {
-  fill: rgba(var(--shadow-rgb), 0.16);
+/* hover/focus affordance: a leaf-colored ring around the hit circle */
+.bp-plant:hover .bp-plant__hit,
+.bp-plant:focus .bp-plant__hit {
+  stroke: var(--leaf);
+  stroke-width: 0.12;
 }
 
-.bp-plant__pot {
-  fill: var(--terracotta);
-}
-
-.bp-plant__rim {
-  fill: var(--pot-rim);
-}
-
-.bp-plant__leaf {
-  stroke: rgba(var(--ink-rgb), 0.25);
-  stroke-width: 0.05;
-}
-
-.bp-plant:hover .bp-plant__leaf,
-.bp-plant:focus .bp-plant__leaf {
-  stroke: var(--ink);
-  stroke-width: 0.09;
+/* the blueprint's slab drop-shadow follows the theme's shadow color
+   (a CSS property wins over the SVG flood-color attribute) */
+.bp feDropShadow {
+  flood-color: rgb(var(--shadow-rgb));
 }
 
 .bp-dot--fine { fill: var(--state-fine); }

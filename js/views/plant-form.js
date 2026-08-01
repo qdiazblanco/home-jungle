@@ -194,8 +194,12 @@ export function render(container, params, routeName) {
 
   /* ---------- cover photo: path input + in-form capture ---------- */
 
+  // Committed images captured for a plant that does not exist yet: their
+  // photo events are logged right after createPlant in save().
+  const pendingPhotoSrcs = [];
+
   // Same rules as the profile capture: PUT the image first (never queued),
-  // then reference it — here as the plant's cover path.
+  // then log the photo event that references it — plus the cover path here.
   function photoField() {
     const pathInput = textInput(() => state.photo, (v) => { state.photo = v || null; });
     const captureBtn = el(
@@ -239,7 +243,9 @@ export function render(container, params, routeName) {
                 for (let n = taken + 1; ; n++) {
                   path = `${prefix}${n}.${ext}`;
                   try {
-                    await gh.putBinaryFile(path, bytes, `photo: ${state.name.trim() || id}`);
+                    // ...IfAbsent: a retry after a lost response recognizes
+                    // the already-landed file instead of duplicating it.
+                    await gh.putBinaryFileIfAbsent(path, bytes, `photo: ${state.name.trim() || id}`);
                     break;
                   } catch (err) {
                     if (err.kind === 'conflict' && n <= taken + 6) continue;
@@ -248,6 +254,11 @@ export function render(container, params, routeName) {
                 }
                 state.photo = path;
                 pathInput.value = path;
+                // The image is committed either way — the photo event keeps
+                // it discoverable in the profile album even if the cover
+                // changes later.
+                if (editing) store.logEvent(state.id, 'photo', { src: path });
+                else pendingPhotoSrcs.push(path);
                 snackbar({ message: 'Photo committed — it becomes the cover when you save.' });
               } catch (err) {
                 snackbar({ message: `Could not upload the photo: ${err.message}` });
@@ -536,6 +547,8 @@ export function render(container, params, routeName) {
     } else {
       state.id = uniqueId(state.name);
       store.createPlant(state);
+      // Photos captured before the plant existed: log them now that it does.
+      for (const src of pendingPhotoSrcs) store.logEvent(state.id, 'photo', { src });
       navigate(`#/plant/${encodeURIComponent(state.id)}`);
     }
   }

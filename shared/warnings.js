@@ -29,11 +29,13 @@ const SUGGESTION_MIN_GAPS = 2;
 const SUGGESTION_SLACK_DAYS = 2;
 
 /**
- * When the log shows the plant consistently going longer than its effective
- * interval — and the latest long gap includes a "still moist" check, i.e. a
- * deliberate judgment rather than neglect — suggest the median gap as the
- * observed interval for the season. NEVER auto-applied: recording an
- * observed value stays a human action in the care edit sheet.
+ * When the log shows the plant CONSISTENTLY going longer than its effective
+ * interval — every in-season gap is long, and the latest one includes a
+ * "still moist" check, i.e. a deliberate judgment rather than neglect —
+ * suggest the median gap as the observed interval for the season. A single
+ * ordinary-length gap (a top-up watering) breaks the pattern and silences
+ * the suggestion. NEVER auto-applied: recording an observed value stays a
+ * human action in the care edit sheet.
  */
 function intervalSuggestion(plant, events, today, season) {
   const interval = wateringIntervalFor(plant, season);
@@ -54,12 +56,16 @@ function intervalSuggestion(plant, events, today, season) {
     // summer can start in winter (the first spring watering after the rest
     // period) and would skew the median absurdly.
     if (seasonForDay(days[i]) !== season || seasonForDay(days[i - 1]) !== season) continue;
-    const length = daysBetween(days[i - 1], days[i]);
-    if (length >= interval + SUGGESTION_SLACK_DAYS) {
-      gaps.push({ start: days[i - 1], end: days[i], length });
-    }
+    gaps.push({ start: days[i - 1], end: days[i], length: daysBetween(days[i - 1], days[i]) });
   }
-  if (gaps.length < SUGGESTION_MIN_GAPS) return null;
+  // ALL in-season gaps must be long — filtering out the short ones would let
+  // the suggestion fire right after a normal watering the log contradicts.
+  if (
+    gaps.length < SUGGESTION_MIN_GAPS ||
+    gaps.some((g) => g.length < interval + SUGGESTION_SLACK_DAYS)
+  ) {
+    return null;
+  }
 
   const latest = gaps[gaps.length - 1];
   const checkedGap = events.some((e) => {

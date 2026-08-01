@@ -110,11 +110,11 @@ function furnitureModel(layout, byRoom) {
 
 /** Plant silhouette markup for a 24×30 viewBox, foliage tinted by urgency. */
 export function iconMarkup(state, iconKind) {
-  const leaf = (extra) => `class="bp-dot--${state}" stroke="rgba(43,51,42,0.25)" stroke-width="0.6" ${extra}`;
+  const leaf = (extra) => `class="bp-dot--${state}" stroke="rgba(var(--ink-rgb), 0.25)" stroke-width="0.6" ${extra}`;
   const potBase =
-    `<ellipse cx="12" cy="27.4" rx="7" ry="1.8" fill="rgba(43,51,42,0.2)"/>` +
+    `<ellipse cx="12" cy="27.4" rx="7" ry="1.8" fill="rgba(var(--shadow-rgb), 0.2)"/>` +
     `<path d="M6.5 16.5 L17.5 16.5 L15.8 24 L8.2 24 Z" fill="var(--terracotta)"/>` +
-    `<rect x="5.4" y="15" width="13.2" height="2.4" rx="0.8" fill="#b5654a"/>`;
+    `<rect x="5.4" y="15" width="13.2" height="2.4" rx="0.8" fill="var(--pot-rim)"/>`;
   switch (iconKind) {
     case 'bushy':
       return (
@@ -128,7 +128,7 @@ export function iconMarkup(state, iconKind) {
     case 'tree':
       return (
         potBase +
-        `<rect x="11" y="8" width="2" height="8" rx="1" fill="#7a5a3a"/>` +
+        `<rect x="11" y="8" width="2" height="8" rx="1" fill="var(--wood-3)"/>` +
         `<circle ${leaf('cx="12" cy="6.4" r="5.6"')}/>`
       );
     case 'cactus':
@@ -140,9 +140,9 @@ export function iconMarkup(state, iconKind) {
       );
     case 'hanging':
       return (
-        `<ellipse cx="12" cy="27.4" rx="7" ry="1.8" fill="rgba(43,51,42,0.2)"/>` +
+        `<ellipse cx="12" cy="27.4" rx="7" ry="1.8" fill="rgba(var(--shadow-rgb), 0.2)"/>` +
         `<path d="M7 8.5 L17 8.5 L15.6 14.5 L8.4 14.5 Z" fill="var(--terracotta)"/>` +
-        `<rect x="6" y="7.2" width="12" height="2.2" rx="0.8" fill="#b5654a"/>` +
+        `<rect x="6" y="7.2" width="12" height="2.2" rx="0.8" fill="var(--pot-rim)"/>` +
         `<path d="M8 14.5 C7 19 7.5 23 6.5 26" fill="none" stroke="var(--leaf-deep)" stroke-width="0.9"/>` +
         `<path d="M12 14.5 C12 20 11.5 24 12.5 27" fill="none" stroke="var(--leaf-deep)" stroke-width="0.9"/>` +
         `<path d="M16 14.5 C17 19 16.5 23 17.5 25" fill="none" stroke="var(--leaf-deep)" stroke-width="0.9"/>` +
@@ -325,6 +325,10 @@ function drawContent(root, draw) {
           if (viewMode === '3d' && !editor && document.contains(boardCard)) currentDraw?.();
         },
         () => {
+          // Same liveness guard as the success path: a rejection landing
+          // after navigation must not snackbar over another view, flip the
+          // saved preference, or repaint a detached tree.
+          if (!(viewMode === '3d' && !editor && document.contains(boardCard))) return;
           snackbar({ message: 'Could not load the 3D view — showing the plan instead.' });
           setMode('plan');
         },

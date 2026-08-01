@@ -156,6 +156,16 @@ describe('getWarnings — observed-interval suggestion', () => {
     assert.equal(suggestionsFor(events).length, 0);
   });
 
+  it('a single ordinary gap breaks the pattern (top-up watering silences it)', () => {
+    // Two long gaps, then a 2-day top-up by the other gardener: the latest
+    // log contradicts "keeps doing fine for ~9 days", so nothing may fire.
+    const events = [
+      ...wateringsAt('2026-07-01', '2026-07-10', '2026-07-19', '2026-07-21'),
+      makeEvent({ id: 'c', type: 'check', date: '2026-07-17T09:00:00' }),
+    ];
+    assert.equal(suggestionsFor(events).length, 0);
+  });
+
   it('takes the median of an odd gap set (9, 9, 13 → 9)', () => {
     const events = [
       ...wateringsAt('2026-06-19', '2026-06-28', '2026-07-07', '2026-07-20'),
@@ -166,8 +176,10 @@ describe('getWarnings — observed-interval suggestion', () => {
     assert.equal(w.data.gapCount, 3);
   });
 
-  it('only counts gaps ending in the current season', () => {
-    // Two long gaps ending in winter months + one in summer → below threshold.
+  it('only counts gaps lying entirely within the current season', () => {
+    // Two winter gaps and the cross-season Jan→Jul gap (which ENDS in summer
+    // but would skew the median to ~90 days) are all excluded; the single
+    // all-summer gap stays below the 2-gap threshold.
     const events = [
       ...wateringsAt('2026-01-01', '2026-01-10', '2026-01-19', '2026-07-10', '2026-07-19'),
       makeEvent({ id: 'c', type: 'check', date: '2026-07-17T09:00:00' }),

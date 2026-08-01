@@ -306,8 +306,7 @@ function drawContent(root, id, draw) {
                 'aria-label': `Open photo from ${fmtDay(dayOf(event.date))}`,
                 onclick: () => openPhotoViewer(plant, event, canEdit, draw),
               },
-              el('img', {
-                src: event.src,
+              photoImg(event, {
                 loading: 'lazy',
                 alt: [fmtDay(dayOf(event.date), { withYear: 'always' }), event.note]
                   .filter(Boolean)
@@ -982,6 +981,31 @@ function openMixSheet(plant, care, draw) {
 
 /* ---------- photos: capture, commit, view ---------- */
 
+// Object URLs for photos committed THIS session: the repo path 404s until
+// GitHub Pages redeploys, so the album serves the local bytes meanwhile.
+const freshPhotoUrls = new Map(); // src path -> object URL
+
+/** Album <img> for a photo event: fresh local bytes when available, and a
+ * tinted-leaf placeholder on 404 (mirrors plantPhoto) — never a broken
+ * image glyph, e.g. on the other phone before Pages redeploys. */
+function photoImg(event, attrs = {}) {
+  const img = el('img', { src: freshPhotoUrls.get(event.src) ?? event.src, ...attrs });
+  img.addEventListener('error', () => {
+    const holder = el(
+      'span',
+      {
+        class: 'photo-grid__missing',
+        role: 'img',
+        'aria-label': attrs.alt ?? 'Photo not available yet',
+        title: 'Not published yet — it appears once the site redeploys.',
+      },
+      icon('leaf'),
+    );
+    img.replaceWith(holder);
+  });
+  return img;
+}
+
 /** Next collision-free repo path for a photo of this plant today. */
 function photoPath(plant, ext, bump = 0) {
   const day = todayString();
@@ -1034,11 +1058,13 @@ async function openPhotoCommitSheet(plant, file, draw) {
       let path = photoPath(plant, ext);
       for (let bump = 1; ; bump++) {
         try {
-          await gh.putBinaryFile(path, bytes, `photo: ${plant.name}`);
+          // ...IfAbsent: a retry after a lost PUT response recognizes the
+          // already-landed file by content instead of duplicating it.
+          await gh.putBinaryFileIfAbsent(path, bytes, `photo: ${plant.name}`);
           break;
         } catch (err) {
-          // Path already exists (same-day upload from the other phone):
-          // pick the next filename. Anything else is a real failure.
+          // Path already exists with DIFFERENT bytes (same-day upload from
+          // the other phone): pick the next filename. Anything else fails.
           if (err.kind === 'conflict' && bump <= 5) {
             path = photoPath(plant, ext, bump);
             continue;
@@ -1047,6 +1073,12 @@ async function openPhotoCommitSheet(plant, file, draw) {
         }
       }
       store.logEvent(plant.id, 'photo', { note: noteInput.value.trim() || null, src: path });
+      // Pages serves the file only after the deploy finishes (~1 min); keep
+      // the just-committed bytes renderable locally until then.
+      freshPhotoUrls.set(
+        path,
+        URL.createObjectURL(new Blob([bytes], { type: ext === 'webp' ? 'image/webp' : 'image/jpeg' })),
+      );
       URL.revokeObjectURL(previewUrl);
       close();
       snackbar({ message: 'Photo committed 🌿' });
@@ -1086,9 +1118,10 @@ async function openPhotoCommitSheet(plant, file, draw) {
 function openPhotoViewer(plant, event, canEdit, draw) {
   const { close, body } = showSheet({ title: fmtDay(dayOf(event.date), { withYear: 'always' }) });
   const isCover = plant.photo === event.src;
+  // Native append stringifies null (and arrays) — '' is the safe no-op child.
   body.append(
-    el('div', { class: 'photo-view' }, el('img', { src: event.src, alt: event.note ?? plant.name })),
-    event.note ? el('p', { class: 'small' }, event.note) : null,
+    el('div', { class: 'photo-view' }, photoImg(event, { alt: event.note ?? plant.name })),
+    event.note ? el('p', { class: 'small' }, event.note) : '',
     el('p', { class: 'small muted' }, `${fmtDateTime(event.date)} — ${event.author ?? '?'}`),
     canEdit
       ? el(
@@ -1109,7 +1142,7 @@ function openPhotoViewer(plant, event, canEdit, draw) {
             isCover ? 'Current cover ✓' : 'Set as cover',
           ),
         )
-      : null,
+      : '',
   );
 }
 
