@@ -2,7 +2,7 @@
 
 import * as store from './store.js';
 import { startRouter } from './router.js';
-import { initTheme } from './theme.js';
+import { initTheme, currentTheme, toggleTheme } from './theme.js';
 import { isGardener, onSettingsChange } from './settings.js';
 import { el, icon, clear, snackbar } from './ui.js';
 import { mountSyncStatus } from './components/sync-status.js';
@@ -43,6 +43,22 @@ let renderedPhase = null;
 
 function renderHeaderNav() {
   clear(headerNavEl);
+  // Theme toggle first: one tap flips light/dark (stored as an explicit
+  // choice; Settings' "Auto" hands control back to the system).
+  const dark = currentTheme() === 'dark';
+  headerNavEl.appendChild(
+    el(
+      'button',
+      {
+        class: 'header-nav__link',
+        type: 'button',
+        'aria-label': dark ? 'Switch to the light theme' : 'Switch to the dark theme',
+        title: dark ? 'Light theme' : 'Dark theme',
+        onclick: toggleTheme,
+      },
+      icon(dark ? 'sun' : 'moon'),
+    ),
+  );
   const entries = [
     { href: '#/calendar', label: 'Calendar', iconName: 'calendar', active: route.name === 'calendar' },
     { href: '#/map', label: 'House map', iconName: 'mapIcon', active: route.name === 'map' },

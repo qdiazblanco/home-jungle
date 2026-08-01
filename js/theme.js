@@ -7,7 +7,7 @@
 // index.html runs a tiny inline copy of this logic before first paint to
 // avoid a light flash on dark systems — keep the two in sync.
 
-import { getSettings, onSettingsChange } from './settings.js';
+import { getSettings, saveSettings, onSettingsChange } from './settings.js';
 
 const THEME_COLORS = { light: '#3e6b4a', dark: '#181c16' };
 
@@ -31,4 +31,15 @@ export function initTheme() {
   applyTheme();
   darkQuery.addEventListener('change', applyTheme);
   onSettingsChange(applyTheme);
+}
+
+/** The theme currently in effect ('light' | 'dark'), after resolving auto. */
+export function currentTheme() {
+  return resolvedTheme();
+}
+
+/** Header toggle: flip the RESOLVED theme, stored as an explicit choice
+ * (Settings still offers 'auto' to hand control back to the system). */
+export function toggleTheme() {
+  saveSettings({ theme: resolvedTheme() === 'dark' ? 'light' : 'dark' });
 }

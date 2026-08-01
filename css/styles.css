@@ -1313,6 +1313,11 @@ code {
   height: var(--tap-target);
   border-radius: var(--radius-md);
   color: var(--ink-soft);
+  /* also used as a <button> (theme toggle) */
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 
 .header-nav__link .icon svg {
