@@ -34,6 +34,28 @@ describe('renderMarkdown — grammar', () => {
     );
   });
 
+  it('keeps bold, italic and link syntax literal inside code spans', () => {
+    assert.equal(
+      renderMarkdown('`a**b**c`'),
+      '<p><code>a**b**c</code></p>',
+    );
+    assert.equal(
+      renderMarkdown('water `*roughly*` weekly'),
+      '<p>water <code>*roughly*</code> weekly</p>',
+    );
+    assert.equal(
+      renderMarkdown('`[not a link](https://x.y)`'),
+      '<p><code>[not a link](https://x.y)</code></p>',
+    );
+  });
+
+  it('renders a code span adjacent to real bold', () => {
+    assert.equal(
+      renderMarkdown('`npm test` **before every commit**'),
+      '<p><code>npm test</code> <strong>before every commit</strong></p>',
+    );
+  });
+
   it('returns empty string for empty or non-string input', () => {
     assert.equal(renderMarkdown(''), '');
     assert.equal(renderMarkdown('   \n  '), '');
