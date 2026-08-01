@@ -297,7 +297,8 @@ function drawContent(root, draw) {
   );
 
   /* ---- the blueprint / dollhouse ---- */
-  const statusOf = (plant) => wateringStatus(plant, events, today, season);
+  const statusOf = (plant) =>
+    wateringStatus(plant, events, today, season, { mode: store.scheduleMode() });
   const boardCard = el('div', { class: 'card bp-card' });
   tipContainer = boardCard;
 

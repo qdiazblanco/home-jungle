@@ -105,6 +105,15 @@ export function currentSeason() {
   return seasonForDay(todayString(), seasonOverride === 'auto' ? null : seasonOverride);
 }
 
+/**
+ * Schedule mode for wateringStatus/getWarnings. A manual season override is
+ * an explicit "treat it as summer/winter" — it wins over blending.
+ */
+export function scheduleMode() {
+  const { seasonMode, seasonOverride } = getSettings();
+  return seasonMode === 'blended' && (seasonOverride ?? 'auto') === 'auto' ? 'blended' : 'binary';
+}
+
 /* ---------------- load ---------------- */
 
 async function fetchPagesFile(path) {

@@ -37,7 +37,7 @@ export function render(container) {
 
 /** One row model feeds both layouts — one gate, one source of truth. */
 function rowModel(plant, events, today, season, pending, canEdit) {
-  const status = wateringStatus(plant, events, today, season);
+  const status = wateringStatus(plant, events, today, season, { mode: store.scheduleMode() });
   const care = effectiveCare(plant);
   const seasonKey = season === 'summer' ? 'watering_days_summer' : 'watering_days_winter';
   const lastFeed = lastEventOfType(events, plant.id, 'feeding', today);

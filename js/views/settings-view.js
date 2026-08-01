@@ -265,11 +265,42 @@ function drawContent(root, draw) {
     }
   };
   drawSeasons();
+
+  const modeSeg = el('div', { class: 'segmented', role: 'group', 'aria-label': 'Schedule mode' });
+  const modes = [
+    ['binary', 'Two seasons'],
+    ['blended', 'Blended'],
+  ];
+  const drawModes = () => {
+    modeSeg.textContent = '';
+    for (const [value, label] of modes) {
+      modeSeg.appendChild(
+        el(
+          'button',
+          {
+            'aria-pressed': String((getSettings().seasonMode ?? 'binary') === value),
+            onclick: () => {
+              saveSettings({ seasonMode: value });
+              drawModes();
+            },
+          },
+          label,
+        ),
+      );
+    }
+  };
+  drawModes();
+
   seasonCard.append(
     el('p', { class: 'small muted' },
       'Auto: summer rhythm May–September. The override changes watering rhythms only, ',
       'on this device only — calendar reminders (feeding, autumn light) follow the real month.'),
     seasonSeg,
+    el('p', { class: 'small muted', style: 'margin-top: 0.75rem' },
+      'Blended ramps each watering rhythm month by month between the winter and summer values ',
+      '(January = winter, July = summer) instead of switching hard in May and October. ',
+      'On this device only; a forced season above wins over blending. The Telegram digest keeps two seasons.'),
+    modeSeg,
   );
   root.appendChild(seasonCard);
 

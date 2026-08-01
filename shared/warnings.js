@@ -83,7 +83,14 @@ const OCTOBER = 10;
 /** Overdue escalates to 'urgent' past 1.5× the effective interval. */
 const URGENT_FACTOR = 1.5;
 
-export function getWarnings({ plants, events, today, season = null }) {
+/**
+ * `mode` mirrors the device's schedule mode ('binary' default, 'blended'
+ * interpolates intervals by month) so the panel never disagrees with the
+ * Today list. The notification Action always runs binary — settings are
+ * device-local. The interval SUGGESTION stays on the binary seasonal
+ * interval either way: it proposes a per-season observed value.
+ */
+export function getWarnings({ plants, events, today, season = null, mode = 'binary' }) {
   const effectiveSeason = season ?? seasonForDay(today);
   const month = monthOf(today);
   const year = yearOf(today);
@@ -92,7 +99,7 @@ export function getWarnings({ plants, events, today, season = null }) {
   for (const plant of plants) {
     if (plant.status !== 'active') continue;
 
-    const status = wateringStatus(plant, events, today, effectiveSeason);
+    const status = wateringStatus(plant, events, today, effectiveSeason, { mode });
     if (status?.state === 'overdue') {
       warnings.push({
         id: `watering-overdue:${plant.id}`,

@@ -16,8 +16,9 @@
 // Only status:"active" plants are scheduled (wishlist/gifted/deceased are
 // encyclopedia records, not chores).
 
-import { dayOf, daysBetween } from './dates.js';
+import { dayOf, daysBetween, monthOf } from './dates.js';
 import { effectiveCare } from './effective-care.js';
+import { summerWeight } from './season.js';
 
 /**
  * Most recent event of `type` for `plantId`, dated on or before `today`.
@@ -36,12 +37,32 @@ export function lastEventOfType(events, plantId, type, today) {
   return best;
 }
 
-/** Effective watering interval in days for the season, or null if unusable. */
-export function wateringIntervalFor(plant, season) {
-  const { values } = effectiveCare(plant);
-  const raw = season === 'summer' ? values.watering_days_summer : values.watering_days_winter;
+const usableDays = (raw) => {
   const days = Number(raw);
   return Number.isFinite(days) && days > 0 ? days : null;
+};
+
+/**
+ * Effective watering interval in days, or null if unusable.
+ * Default ('binary') mode picks the season's value. The optional 'blended'
+ * mode (opts { mode: 'blended', today }) interpolates linearly between the
+ * winter and summer values by calendar month (January = winter, July =
+ * summer, symmetric ramps), rounded, minimum 1 day; a plant with only one
+ * usable value keeps that value year-round.
+ */
+export function wateringIntervalFor(plant, season, opts = {}) {
+  const { values } = effectiveCare(plant);
+  const summer = usableDays(values.watering_days_summer);
+  const winter = usableDays(values.watering_days_winter);
+
+  if (opts.mode === 'blended' && opts.today) {
+    if (summer === null && winter === null) return null;
+    if (summer === null || winter === null) return summer ?? winter;
+    const blended = Math.round(winter + (summer - winter) * summerWeight(monthOf(opts.today)));
+    return Math.max(1, blended);
+  }
+
+  return season === 'summer' ? summer : winter;
 }
 
 /** Days a "still moist" soil check keeps the schedule quiet. */
@@ -55,10 +76,10 @@ export const CHECK_SNOOZE_DAYS = 2;
  *   anchor (more recent than the last watering), else null. dueIn reflects
  *   the snooze; daysSince always counts from the last actual watering.
  */
-export function wateringStatus(plant, events, today, season) {
+export function wateringStatus(plant, events, today, season, opts = {}) {
   if (plant.status !== 'active') return null;
 
-  const interval = wateringIntervalFor(plant, season);
+  const interval = wateringIntervalFor(plant, season, { ...opts, today });
   const last = lastEventOfType(events, plant.id, 'watering', today);
 
   if (!last || interval === null) {

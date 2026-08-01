@@ -101,7 +101,7 @@ function drawContent(root, id, draw) {
 
   const today = store.today();
   const season = store.currentSeason();
-  const status = wateringStatus(plant, events, today, season);
+  const status = wateringStatus(plant, events, today, season, { mode: store.scheduleMode() });
   const care = effectiveCare(plant);
   const pending = store.pendingPlantIds('watering');
   const pendingCheck = store.pendingPlantIds('check');

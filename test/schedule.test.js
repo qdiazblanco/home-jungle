@@ -149,6 +149,61 @@ describe('wateringStatus', () => {
   });
 });
 
+describe('wateringIntervalFor — blended mode', () => {
+  // Fixture plant: summer 7 / winter 12. Blend = winter + (summer−winter)·w.
+  const blendedAt = (today, plant = makePlant()) =>
+    wateringIntervalFor(plant, 'summer', { mode: 'blended', today });
+
+  it('hits the anchors: January = winter value, July = summer value', () => {
+    assert.equal(blendedAt('2026-01-15'), 12);
+    assert.equal(blendedAt('2026-07-15'), 7);
+  });
+
+  it('interpolates the shoulder months, rounded', () => {
+    assert.equal(blendedAt('2026-04-10'), 10); // 12 − 5·(3/6) = 9.5 → 10
+    assert.equal(blendedAt('2026-10-10'), 10); // symmetric
+    assert.equal(blendedAt('2026-06-10'), 8); // 12 − 5·(5/6) ≈ 7.83 → 8
+    assert.equal(blendedAt('2026-02-10'), 11); // 12 − 5·(1/6) ≈ 11.17 → 11
+  });
+
+  it('never drops below 1 day', () => {
+    const plant = makePlant({
+      care: { reference: { watering_days_summer: 1, watering_days_winter: 1 }, observed: {} },
+    });
+    assert.equal(blendedAt('2026-07-15', plant), 1);
+  });
+
+  it('keeps a single usable value year-round instead of blending with nothing', () => {
+    const summerOnly = makePlant({
+      care: { reference: { watering_days_summer: 7 }, observed: {} },
+    });
+    assert.equal(blendedAt('2026-01-15', summerOnly), 7);
+    const neither = makePlant({ care: { reference: {}, observed: {} } });
+    assert.equal(blendedAt('2026-01-15', neither), null);
+  });
+
+  it('reads the observed layer like binary mode does', () => {
+    const plant = makePlant({
+      care: {
+        reference: { watering_days_summer: 7, watering_days_winter: 12 },
+        observed: { watering_days_winter: 20 },
+      },
+    });
+    assert.equal(blendedAt('2026-01-15', plant), 20);
+    assert.equal(blendedAt('2026-04-10', plant), 14); // 20 − 13·(3/6) = 13.5 → 14
+  });
+
+  it('threads through wateringStatus without changing binary defaults', () => {
+    const plant = makePlant(); // summer 7
+    const events = [makeEvent({ date: '2026-07-13T10:00:00' })]; // 9 days before TODAY
+    assert.equal(wateringStatus(plant, events, TODAY, 'summer').state, 'overdue');
+    assert.equal(
+      wateringStatus(plant, events, TODAY, 'summer', { mode: 'blended' }).state,
+      'overdue', // July blends to the pure summer value anyway
+    );
+  });
+});
+
 describe('wateringStatus — "still moist" soil checks', () => {
   // The brief's worked example: interval 10, watered 12 days ago → overdue;
   // a check today lifts it to fine (dueIn 2), then the nag walks back in.

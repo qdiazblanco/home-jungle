@@ -44,7 +44,10 @@ function drawContent(root, draw) {
 
   const active = plants.filter((p) => p.status === 'active');
   const entries = active
-    .map((plant) => ({ plant, status: wateringStatus(plant, events, today, season) }))
+    .map((plant) => ({
+      plant,
+      status: wateringStatus(plant, events, today, season, { mode: store.scheduleMode() }),
+    }))
     .sort(
       (a, b) => compareUrgency(a.status, b.status) || a.plant.name.localeCompare(b.plant.name),
     );
@@ -68,7 +71,10 @@ function drawContent(root, draw) {
   );
 
   /* ---- warnings panel ---- */
-  const panel = warningList(getWarnings({ plants, events, today, season }), plantsById);
+  const panel = warningList(
+    getWarnings({ plants, events, today, season, mode: store.scheduleMode() }),
+    plantsById,
+  );
   if (panel) root.appendChild(panel);
 
   /* ---- this-month teaser (seasonal calendar) ---- */

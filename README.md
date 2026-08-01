@@ -43,6 +43,9 @@ diary.
   work offline.
 - **Light & dark** — the botanical notebook and its night edition;
   follows the system setting or a manual pick in Settings.
+- **Blended seasons (optional)** — instead of the hard May/October
+  switch, watering rhythms can ramp month by month between the winter
+  and summer values (Settings → Season).
 
 - **Daily notifications, still no backend** — a scheduled GitHub Action
   reuses the same warnings module and sends a Telegram digest: thirsty
