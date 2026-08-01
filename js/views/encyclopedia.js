@@ -13,14 +13,81 @@ import { todayString } from '../../shared/dates.js';
 import { plantPhoto } from '../components/plant-row.js';
 import { navigate } from '../router.js';
 
+/* search + badge filter (module state, reset on route change) */
+let encFilters = { q: '', which: 'all' }; // which: 'all' | 'got' | 'want'
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('hashchange', () => {
+    encFilters = { q: '', which: 'all' };
+  });
+}
+
 export function render(container) {
   const root = el('div');
   container.appendChild(root);
+
+  root.appendChild(
+    el(
+      'div',
+      { class: 'section-title' },
+      el('h1', {}, 'Encyclopedia'),
+      el('span', { class: 'muted small' }, 'the jungle we have & the jungle we dream of'),
+    ),
+  );
+
+  const listRoot = el('div');
   const draw = () => {
-    clear(root);
-    drawContent(root, draw);
+    clear(listRoot);
+    drawContent(listRoot, draw);
   };
+
+  // Persistent bar: only the list redraws, so typing keeps focus.
+  const whichSeg = el('div', { class: 'segmented', role: 'group', 'aria-label': 'Show' });
+  const drawWhich = () => {
+    whichSeg.textContent = '';
+    for (const [value, label] of [['all', 'All'], ['got', 'I got it'], ['want', 'I want it']]) {
+      whichSeg.appendChild(
+        el(
+          'button',
+          {
+            'aria-pressed': String(encFilters.which === value),
+            onclick: () => {
+              encFilters.which = value;
+              drawWhich();
+              draw();
+            },
+          },
+          label,
+        ),
+      );
+    }
+  };
+  drawWhich();
+  root.appendChild(
+    el(
+      'div',
+      { class: 'filter-bar' },
+      el('input', {
+        type: 'search',
+        placeholder: 'Search name, species, notes…',
+        'aria-label': 'Search the encyclopedia',
+        value: encFilters.q,
+        oninput: (e) => {
+          encFilters.q = e.target.value.trim();
+          draw();
+        },
+      }),
+      whichSeg,
+    ),
+  );
+  root.appendChild(listRoot);
   draw();
+}
+
+function matchesSearch(plant) {
+  if (!encFilters.q) return true;
+  const hay = `${plant.name} ${plant.species ?? ''} ${plant.nickname ?? ''} ${plant.general_notes ?? ''}`.toLowerCase();
+  return hay.includes(encFilters.q.toLowerCase());
 }
 
 function badge(kind) {
@@ -86,25 +153,24 @@ function drawContent(root, draw) {
   const canEdit = isGardener();
 
   const wishes = plants
-    .filter((p) => p.status === 'wishlist')
+    .filter((p) => p.status === 'wishlist' && matchesSearch(p))
     .sort((a, b) => a.name.localeCompare(b.name));
   const STATUS_ORDER = { active: 0, gifted: 1, deceased: 2 };
   const got = plants
-    .filter((p) => p.status !== 'wishlist')
+    .filter((p) => p.status !== 'wishlist' && matchesSearch(p))
     .sort(
       (a, b) =>
         (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3) ||
         a.name.localeCompare(b.name),
     );
 
-  root.appendChild(
-    el(
-      'div',
-      { class: 'section-title' },
-      el('h1', {}, 'Encyclopedia'),
-      el('span', { class: 'muted small' }, 'the jungle we have & the jungle we dream of'),
-    ),
-  );
+  if (encFilters.q && !wishes.length && !got.length) {
+    root.appendChild(
+      el('div', { class: 'empty-state', style: 'padding: 1rem' }, icon('leaf'),
+        el('p', {}, 'Nothing in the encyclopedia matches that search.')),
+    );
+    return;
+  }
 
   if (!wishes.length && !got.length) {
     root.appendChild(
@@ -120,43 +186,47 @@ function drawContent(root, draw) {
   }
 
   /* ---- I want it ---- */
-  root.appendChild(
-    el(
-      'div',
-      { class: 'section-title' },
-      el('h2', {}, 'I want it'),
-      el('span', { class: 'muted small' }, 'spotted, coveted, not home yet'),
-    ),
-  );
-  if (wishes.length) {
-    for (const plant of wishes) root.appendChild(plantEntry(plant, { canEdit, draw }));
-  } else {
-    root.appendChild(
-      el('p', { class: 'small muted' }, 'No wishes right now — the jungle is complete. For now.'),
-    );
-  }
-  if (canEdit) {
+  if (encFilters.which !== 'got') {
     root.appendChild(
       el(
-        'p',
-        { class: 'small muted' },
-        'Spotted something? ',
-        el('a', { href: '#/add' }, 'Add it'),
-        ' with status “wishlist” and note where you saw it.',
+        'div',
+        { class: 'section-title' },
+        el('h2', {}, 'I want it'),
+        el('span', { class: 'muted small' }, 'spotted, coveted, not home yet'),
       ),
     );
+    if (wishes.length) {
+      for (const plant of wishes) root.appendChild(plantEntry(plant, { canEdit, draw }));
+    } else {
+      root.appendChild(
+        el('p', { class: 'small muted' }, 'No wishes right now — the jungle is complete. For now.'),
+      );
+    }
+    if (canEdit) {
+      root.appendChild(
+        el(
+          'p',
+          { class: 'small muted' },
+          'Spotted something? ',
+          el('a', { href: '#/add' }, 'Add it'),
+          ' with status “wishlist” and note where you saw it.',
+        ),
+      );
+    }
   }
 
   /* ---- I got it ---- */
-  root.appendChild(
-    el(
-      'div',
-      { class: 'section-title' },
-      el('h2', {}, 'I got it'),
-      el('span', { class: 'muted small' }, `${got.length} in the records`),
-    ),
-  );
-  for (const plant of got) root.appendChild(plantEntry(plant, { canEdit, draw }));
+  if (encFilters.which !== 'want') {
+    root.appendChild(
+      el(
+        'div',
+        { class: 'section-title' },
+        el('h2', {}, 'I got it'),
+        el('span', { class: 'muted small' }, `${got.length} in the records`),
+      ),
+    );
+    for (const plant of got) root.appendChild(plantEntry(plant, { canEdit, draw }));
+  }
 }
 
 /** The happy path: a wish becomes a real plant. */

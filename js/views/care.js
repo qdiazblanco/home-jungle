@@ -16,13 +16,116 @@ import { openEventDialog } from '../components/event-dialog.js';
 
 const wideQuery = typeof window !== 'undefined' ? window.matchMedia('(min-width: 48rem)') : null;
 
+/* ---------- filters (module state, reset on route change) ---------- */
+
+const EMPTY_FILTERS = { q: '', room: '', sun: '', pets: '' };
+let filters = { ...EMPTY_FILTERS };
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('hashchange', () => {
+    filters = { ...EMPTY_FILTERS };
+  });
+}
+
+function filtersActive() {
+  return Boolean(filters.q || filters.room || filters.sun || filters.pets);
+}
+
+function matchesFilters(plant, care) {
+  if (filters.q) {
+    const hay = `${plant.name} ${plant.species ?? ''} ${plant.nickname ?? ''}`.toLowerCase();
+    if (!hay.includes(filters.q.toLowerCase())) return false;
+  }
+  if (filters.room && (plant.location?.room ?? '') !== filters.room) return false;
+  if (filters.sun && care.values.sun_need !== filters.sun) return false;
+  if (filters.pets === 'safe' && care.values.toxic_to_pets) return false;
+  if (filters.pets === 'toxic' && !care.values.toxic_to_pets) return false;
+  return true;
+}
+
+/** Built once per mount — only the LIST redraws on change, so the search
+ * box never loses focus mid-word. Returns { bar, resetBar }. */
+function filterBar(plants, redraw) {
+  const rooms = [...new Set(plants.map((p) => p.location?.room).filter(Boolean))].sort();
+  const controls = [];
+  const select = (label, get, set, options) => {
+    const node = el(
+      'select',
+      {
+        'aria-label': `Filter by ${label.toLowerCase()}`,
+        onchange: (e) => {
+          set(e.target.value);
+          redraw();
+        },
+      },
+      el('option', { value: '', selected: get() === '' }, label),
+      options.map(([value, text]) => el('option', { value, selected: get() === value }, text)),
+    );
+    controls.push(node);
+    return node;
+  };
+  const search = el('input', {
+    type: 'search',
+    placeholder: 'Search name, species, nickname…',
+    'aria-label': 'Search plants',
+    value: filters.q,
+    oninput: (e) => {
+      filters.q = e.target.value.trim();
+      redraw();
+    },
+  });
+  controls.push(search);
+  const bar = el(
+    'div',
+    { class: 'filter-bar' },
+    search,
+    select('Room', () => filters.room, (v) => (filters.room = v), rooms.map((r) => [r, r])),
+    select('Sun', () => filters.sun, (v) => (filters.sun = v), [
+      ['low', 'low sun'],
+      ['medium', 'medium sun'],
+      ['high', 'high sun'],
+    ]),
+    select('Pets', () => filters.pets, (v) => (filters.pets = v), [
+      ['safe', 'pet-safe'],
+      ['toxic', 'toxic to pets'],
+    ]),
+  );
+  const resetBar = () => {
+    for (const node of controls) node.value = '';
+  };
+  return { bar, resetBar };
+}
+
 export function render(container) {
   const root = el('div');
   container.appendChild(root);
+
+  root.appendChild(
+    el(
+      'div',
+      { class: 'section-title' },
+      el('h1', {}, 'Care'),
+      el('span', { class: 'muted small' }, `${store.currentSeason()} rhythm`),
+    ),
+  );
+  const listRoot = el('div');
+  let clearFilters = null;
   const draw = () => {
-    clear(root);
-    drawContent(root, draw);
+    clear(listRoot);
+    drawContent(listRoot, draw, clearFilters);
   };
+  const { bar, resetBar } = filterBar(
+    store.getSnapshot().plants.filter((p) => p.status === 'active'),
+    draw,
+  );
+  clearFilters = () => {
+    filters = { ...EMPTY_FILTERS };
+    resetBar();
+    draw();
+  };
+  root.appendChild(bar);
+  root.appendChild(listRoot);
+
   const onLayoutChange = () => draw();
   wideQuery?.addEventListener('change', onLayoutChange);
   const cleanupObserver = new MutationObserver(() => {
@@ -87,31 +190,23 @@ function observedMark(plant, key, field, canEdit) {
   );
 }
 
-function drawContent(root, draw) {
+function drawContent(root, draw, clearFilters) {
   const { plants, events } = store.getSnapshot();
   const today = store.today();
   const season = store.currentSeason();
   const canEdit = isGardener();
   const pending = store.pendingPlantIds('watering');
 
-  root.appendChild(
-    el(
-      'div',
-      { class: 'section-title' },
-      el('h1', {}, 'Care'),
-      el('span', { class: 'muted small' }, `${season} rhythm`),
-    ),
-  );
-
-  const active = plants
-    .filter((p) => p.status === 'active')
+  const activeAll = plants.filter((p) => p.status === 'active');
+  const visible = activeAll.filter((p) => matchesFilters(p, effectiveCare(p)));
+  const active = visible
     .map((p) => rowModel(p, events, today, season, pending, canEdit))
     .sort(
       (a, b) => compareUrgency(a.status, b.status) || a.plant.name.localeCompare(b.plant.name),
     );
   const rest = plants.filter((p) => p.status !== 'active');
 
-  if (!active.length && !rest.length) {
+  if (!activeAll.length && !rest.length) {
     root.appendChild(
       el(
         'div',
@@ -122,6 +217,24 @@ function drawContent(root, draw) {
       ),
     );
     return;
+  }
+
+  if (filtersActive()) {
+    root.appendChild(
+      el(
+        'p',
+        { class: 'small muted' },
+        `${visible.length} of ${activeAll.length} plants match. `,
+        el('button', { class: 'btn btn--sm btn--ghost', onclick: () => clearFilters?.() }, 'Clear filters'),
+      ),
+    );
+  }
+
+  if (activeAll.length && !visible.length) {
+    root.appendChild(
+      el('div', { class: 'empty-state', style: 'padding: 1rem' }, icon('leaf'),
+        el('p', {}, 'No plants match these filters.')),
+    );
   }
 
   if (wideQuery?.matches) {
