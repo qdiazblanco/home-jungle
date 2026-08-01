@@ -1,6 +1,7 @@
-/* Design tokens — botanical notebook, light theme.
-   A future dark theme only needs to re-declare these under a media query
-   or a [data-theme] selector; components never hardcode colors. */
+/* Design tokens — botanical notebook. Components never hardcode colors;
+   the dark theme below re-declares this palette under [data-theme="dark"].
+   js/theme.js stamps data-theme on <html> (an inline copy in index.html
+   runs pre-paint), so there is no unthemed state. */
 
 :root {
   /* Paper & ink */
@@ -13,10 +14,17 @@
   --line: #d9d2bf;
   --line-soft: #e7e1d0;
 
+  /* Ink-tinted hairlines/edges and true shadows, at varying alpha.
+     Split on purpose: in dark mode edges flip to light ink, shadows to black. */
+  --ink-rgb: 43, 51, 42;
+  --shadow-rgb: 43, 51, 42;
+  --backdrop: rgba(43, 51, 42, 0.4);
+
   /* Greens & accents */
   --leaf: #3e6b4a;
   --leaf-deep: #2b5137;
   --leaf-tint: #e1ecdc;
+  --on-leaf: #fff; /* text on --leaf (primary button) — 6.4:1 */
   --terracotta: #96492f; /* 5.0:1 on its tint — the observed marker must stay legible */
   --terracotta-tint: #f3e1d8;
 
@@ -38,6 +46,29 @@
   --danger-bg: #f5dcd6;
   --info-bg: #e7ecf2;
   --info: #38506b;
+
+  /* Photo-placeholder tints (deterministic per plant id) */
+  --plant-tint-a: #e1ecdc;
+  --plant-tint-b: #dfe8d2;
+  --plant-tint-c: #e7e3cf;
+  --plant-tint-d: #dbe6df;
+
+  /* House map surfaces (blueprint floors, dollhouse walls & furniture) */
+  --floor-a: #fbf6ea;
+  --floor-b: #f7f0df;
+  --floor-c: #f3eee2;
+  --wall-face: #f3edda;
+  --wall-side: #e4ddc8; /* fake side lighting */
+  --glass-line: #9fb6c4;
+  --glass-fill: rgba(168, 195, 210, 0.4);
+  --glass-frame: #8fa6b4;
+  --wood-1: #cfa878; /* table tops */
+  --wood-2: #b98f60; /* shelves, table sides */
+  --wood-3: #a9805a; /* stands */
+  --wood-4: #96714d; /* stand sides */
+  --sill-top: #e7e0cd;
+  --sill-side: #ddd5bf;
+  --pot-rim: #b5654a;
 
   /* Typography */
   --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
@@ -76,4 +107,69 @@
 
   /* Touch */
   --tap-target: 44px;
+}
+
+/* ---------- Dark theme: the botanical notebook at night ----------
+   Same structure, dark paper and light ink. Every fg/bg pair below is
+   AA-verified; ratios annotated like the light theme. */
+
+:root[data-theme="dark"] {
+  --paper: #181c16;
+  --paper-raised: #20261e;
+  --paper-sunken: #111510;
+  --ink: #e9e5d8; /* 13.7:1 on --paper */
+  --ink-soft: #c0c6b4; /* 9.9:1 on --paper */
+  --ink-faint: #a8b09b; /* 7.7:1 on --paper, 6.9:1 on --paper-raised */
+  --line: #3c4336;
+  --line-soft: #2d332a;
+
+  --ink-rgb: 233, 229, 216; /* drawn edges flip to light ink */
+  --shadow-rgb: 0, 0, 0; /* shadows stay dark */
+  --backdrop: rgba(0, 0, 0, 0.55);
+
+  --leaf: #6ea87c;
+  --leaf-deep: #9fcaab; /* links/active: 9.5:1 on --paper, 6.9:1 on --leaf-tint */
+  --leaf-tint: #28372b;
+  --on-leaf: #12160f; /* 6.6:1 on --leaf */
+  --terracotta: #e0997c; /* 6.0:1 on its tint, 6.6:1 on --paper-raised */
+  --terracotta-tint: #3b271f;
+
+  --state-fine: #96cba3; /* 7.0:1 */
+  --state-fine-bg: #25361f;
+  --state-soon: #dfc06a; /* 7.4:1 */
+  --state-soon-bg: #39301a;
+  --state-due: #e8a86e; /* 6.8:1 */
+  --state-due-bg: #3a2917;
+  --state-overdue: #eb9a8c; /* 6.7:1 */
+  --state-overdue-bg: #3d211c;
+  --state-unknown: #aebbc7; /* 7.3:1 */
+  --state-unknown-bg: #242b32;
+
+  --danger: #eb9a8c; /* 6.7:1 on --danger-bg, 7.0:1 on --paper-raised */
+  --danger-bg: #3d211c;
+  --info: #9cbbdf; /* 7.2:1 on --info-bg */
+  --info-bg: #222b37;
+
+  --plant-tint-a: #2a352a;
+  --plant-tint-b: #283226;
+  --plant-tint-c: #2f3428;
+  --plant-tint-d: #263029;
+
+  --floor-a: #232920;
+  --floor-b: #20271e;
+  --floor-c: #262b21;
+  --wall-face: #3a4033;
+  --wall-side: #2f352a;
+  --glass-line: #7c93a3;
+  --glass-fill: rgba(120, 160, 185, 0.3);
+  --glass-frame: #7c93a3;
+  --wood-1: #8a6c46;
+  --wood-2: #75583a;
+  --wood-3: #6a4f34;
+  --wood-4: #5c452e;
+  --sill-top: #5e5947;
+  --sill-side: #514c3c;
+
+  --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.28);
+  --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.4), 0 10px 28px rgba(0, 0, 0, 0.45);
 }

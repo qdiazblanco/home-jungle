@@ -32,6 +32,8 @@ diary.
   from two devices merge through sha-conflict handling.
 - **Installable** — manifest + service worker; loads fast and reads
   work offline.
+- **Light & dark** — the botanical notebook and its night edition;
+  follows the system setting or a manual pick in Settings.
 
 - **Daily notifications, still no backend** — a scheduled GitHub Action
   reuses the same warnings module and sends a Telegram digest: thirsty
@@ -52,5 +54,4 @@ tested module that runs identically in the browser and in Node.
 ## What it may do in the future
 
 - In-app photo capture and upload.
-- A dark variant of the botanical-notebook theme.
 - Native web-push notifications from the installed PWA itself.

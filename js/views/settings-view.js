@@ -200,6 +200,42 @@ function drawContent(root, draw) {
   );
   root.appendChild(authorCard);
 
+  /* ================= appearance ================= */
+
+  root.appendChild(el('div', { class: 'section-title' }, el('h2', {}, 'Appearance')));
+  const themeCard = el('div', { class: 'card' });
+  const themeSeg = el('div', { class: 'segmented', role: 'group', 'aria-label': 'Theme' });
+  const themes = [
+    ['auto', 'Auto'],
+    ['light', 'Light'],
+    ['dark', 'Dark'],
+  ];
+  const drawThemes = () => {
+    themeSeg.textContent = '';
+    for (const [value, label] of themes) {
+      themeSeg.appendChild(
+        el(
+          'button',
+          {
+            'aria-pressed': String((getSettings().theme ?? 'auto') === value),
+            onclick: () => {
+              saveSettings({ theme: value });
+              drawThemes();
+            },
+          },
+          label,
+        ),
+      );
+    }
+  };
+  drawThemes();
+  themeCard.append(
+    el('p', { class: 'small muted' },
+      'Auto follows this device’s system setting. Dark is the same notebook at night.'),
+    themeSeg,
+  );
+  root.appendChild(themeCard);
+
   /* ================= season ================= */
 
   root.appendChild(el('div', { class: 'section-title' }, el('h2', {}, 'Season')));

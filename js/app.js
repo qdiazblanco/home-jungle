@@ -2,6 +2,7 @@
 
 import * as store from './store.js';
 import { startRouter } from './router.js';
+import { initTheme } from './theme.js';
 import { isGardener, onSettingsChange } from './settings.js';
 import { el, icon, clear, snackbar } from './ui.js';
 import { mountSyncStatus } from './components/sync-status.js';
@@ -183,6 +184,8 @@ function renderView() {
 }
 
 /* ---------------- boot ---------------- */
+
+initTheme();
 
 startRouter((next) => {
   route = next;

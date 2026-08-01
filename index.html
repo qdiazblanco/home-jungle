@@ -7,6 +7,21 @@
   <meta name="description" content="A living encyclopedia and day-to-day care tracker for our houseplants.">
   <meta name="theme-color" content="#3e6b4a">
 
+  <!-- Pre-paint theme stamp (a tiny inline copy of js/theme.js, which owns
+       the live logic) — avoids a light flash on dark systems. -->
+  <script>
+    try {
+      var s = JSON.parse(localStorage.getItem('digital-garden:settings') || '{}');
+      var t = s.theme === 'light' || s.theme === 'dark'
+        ? s.theme
+        : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.dataset.theme = t;
+      if (t === 'dark') {
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', '#181c16');
+      }
+    } catch (e) { /* default (light) stands */ }
+  </script>
+
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="img/icons/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="img/icons/apple-touch-icon.png">
@@ -21,6 +36,7 @@
   <link rel="modulepreload" href="js/store.js">
   <link rel="modulepreload" href="js/github.js">
   <link rel="modulepreload" href="js/settings.js">
+  <link rel="modulepreload" href="js/theme.js">
   <link rel="modulepreload" href="js/ui.js">
   <link rel="modulepreload" href="js/views/today.js">
   <link rel="modulepreload" href="js/views/care.js">

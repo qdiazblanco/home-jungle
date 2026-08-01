@@ -7,6 +7,7 @@ const DEFAULTS = {
   token: '',
   author: '',
   seasonOverride: 'auto', // 'auto' | 'summer' | 'winter'
+  theme: 'auto', // 'auto' | 'light' | 'dark' (js/theme.js applies it)
   owner: '',
   repo: '',
   branch: '',
