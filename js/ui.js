@@ -83,6 +83,9 @@ const ICONS = {
     '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   ),
   moon: stroke('<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>'),
+  bug: stroke(
+    '<ellipse cx="12" cy="14" rx="5" ry="6"/><path d="M12 8V5m0 3c-2 0-3-1.5-3-3m3 3c2 0 3-1.5 3-3M7 12H4m3 5H4.5M17 12h3m-3 5h2.5M12 10v10"/>',
+  ),
   spinner: stroke('<path d="M12 3a9 9 0 1 0 9 9"/>'),
   cloudOff: stroke('<path d="M4 15a4.5 4.5 0 0 1 3.2-7.7A6 6 0 0 1 18.5 9 4 4 0 0 1 18 17H7"/><path d="M3 3l18 18"/>'),
   leaf: stroke('<path d="M6 21c0-9 4-14 13-16-1 9-5 14-13 16z"/><path d="M6 21c3-6 6-9 10-12"/>'),

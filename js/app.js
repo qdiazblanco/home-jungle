@@ -14,6 +14,7 @@ import * as settingsView from './views/settings-view.js';
 import * as encyclopedia from './views/encyclopedia.js';
 import * as calendar from './views/calendar.js';
 import * as houseMap from './views/map.js';
+import * as health from './views/health.js';
 
 const VIEWS = {
   today,
@@ -25,6 +26,7 @@ const VIEWS = {
   encyclopedia,
   calendar,
   map: houseMap,
+  health,
 };
 
 // Form views manage their own inputs; re-rendering them on every store
@@ -62,6 +64,7 @@ function renderHeaderNav() {
   const entries = [
     { href: '#/calendar', label: 'Calendar', iconName: 'calendar', active: route.name === 'calendar' },
     { href: '#/map', label: 'House map', iconName: 'mapIcon', active: route.name === 'map' },
+    { href: '#/health', label: 'Plant health', iconName: 'bug', active: route.name === 'health' },
   ];
   for (const entry of entries) {
     headerNavEl.appendChild(

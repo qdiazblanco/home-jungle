@@ -25,6 +25,7 @@ const ROUTES = [
   { name: 'encyclopedia', pattern: /^(?:encyclopedia|wishlist)$/ },
   { name: 'calendar', pattern: /^calendar$/ },
   { name: 'map', pattern: /^map$/ },
+  { name: 'health', pattern: /^health$/ },
 ];
 
 function normalize(hash) {
