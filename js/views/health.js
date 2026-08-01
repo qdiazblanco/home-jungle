@@ -13,6 +13,7 @@ import { isGardener } from '../settings.js';
 import { el, icon, clear, fmtDay, fmtRelativeDay, showSheet } from '../ui.js';
 import { dayOf, daysBetween } from '../../shared/dates.js';
 import { plantPhoto, stateChip } from '../components/plant-row.js';
+import { photoImg } from '../components/photo-img.js';
 import { wateringStatus } from '../../shared/schedule.js';
 import { openEventDialog } from '../components/event-dialog.js';
 
@@ -271,8 +272,7 @@ function episodeCard(episode) {
                 href: `#/plant/${encodeURIComponent(episode.plantId)}`,
                 'aria-label': 'Photos from this treatment (on the profile)',
               },
-              el('img', {
-                src: event.src,
+              photoImg(event, {
                 loading: 'lazy',
                 alt: event.note ?? 'Treatment photo',
               }),
@@ -292,6 +292,13 @@ function pickPlantThenLog() {
     .filter((p) => p.status === 'active')
     .sort((a, b) => a.name.localeCompare(b.name));
   const { close, body } = showSheet({ title: 'Treat which plant?' });
+  if (!active.length) {
+    body.append(
+      el('p', { class: 'small muted' }, 'No active plants to treat.'),
+      el('button', { class: 'btn', onclick: () => close() }, 'Close'),
+    );
+    return;
+  }
   body.append(
     // Native append stringifies arrays — spread, always.
     ...active.map((plant) =>

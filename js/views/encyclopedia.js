@@ -164,10 +164,31 @@ function drawContent(root, draw) {
         a.name.localeCompare(b.name),
     );
 
-  if (encFilters.q && !wishes.length && !got.length) {
+  // Emptiness is judged on what the current segment SHOWS — matches hidden
+  // behind the other tab must be pointed at, not silently swallowed.
+  const visibleEmpty =
+    encFilters.which === 'want'
+      ? !wishes.length
+      : encFilters.which === 'got'
+        ? !got.length
+        : !wishes.length && !got.length;
+  if (encFilters.q && visibleEmpty) {
+    const hiddenCount = encFilters.which === 'want' ? got.length : wishes.length;
+    const hiddenLabel = encFilters.which === 'want' ? 'I got it' : 'I want it';
     root.appendChild(
-      el('div', { class: 'empty-state', style: 'padding: 1rem' }, icon('leaf'),
-        el('p', {}, 'Nothing in the encyclopedia matches that search.')),
+      el(
+        'div',
+        { class: 'empty-state', style: 'padding: 1rem' },
+        icon('leaf'),
+        el('p', {}, 'Nothing here matches that search.'),
+        encFilters.which !== 'all' && hiddenCount
+          ? el(
+              'p',
+              { class: 'small' },
+              `${hiddenCount} ${hiddenCount === 1 ? 'match is' : 'matches are'} under “${hiddenLabel}”.`,
+            )
+          : null,
+      ),
     );
     return;
   }
@@ -199,7 +220,13 @@ function drawContent(root, draw) {
       for (const plant of wishes) root.appendChild(plantEntry(plant, { canEdit, draw }));
     } else {
       root.appendChild(
-        el('p', { class: 'small muted' }, 'No wishes right now — the jungle is complete. For now.'),
+        el(
+          'p',
+          { class: 'small muted' },
+          encFilters.q
+            ? 'No wishes match that search.'
+            : 'No wishes right now — the jungle is complete. For now.',
+        ),
       );
     }
     if (canEdit) {
@@ -225,7 +252,17 @@ function drawContent(root, draw) {
         el('span', { class: 'muted small' }, `${got.length} in the records`),
       ),
     );
-    for (const plant of got) root.appendChild(plantEntry(plant, { canEdit, draw }));
+    if (got.length) {
+      for (const plant of got) root.appendChild(plantEntry(plant, { canEdit, draw }));
+    } else {
+      root.appendChild(
+        el(
+          'p',
+          { class: 'small muted' },
+          encFilters.q ? 'Nothing you own matches that search.' : 'No records yet.',
+        ),
+      );
+    }
   }
 }
 

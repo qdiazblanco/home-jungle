@@ -237,10 +237,12 @@ function drawContent(root, draw, clearFilters) {
     );
   }
 
-  if (wideQuery?.matches) {
-    root.appendChild(renderTable(active, canEdit));
-  } else {
-    renderCards(root, active, canEdit);
+  if (active.length) {
+    if (wideQuery?.matches) {
+      root.appendChild(renderTable(active, canEdit));
+    } else {
+      renderCards(root, active, canEdit);
+    }
   }
 
   // Past & wished-for plants moved to their own page — the Care view stays

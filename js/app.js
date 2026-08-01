@@ -193,12 +193,45 @@ function renderView() {
     return;
   }
 
+  // A store-driven re-render can land mid-word in a filter/search box (e.g.
+  // a background flush finishing). Remember which labelled control held
+  // focus and restore it (with the cursor) after the rebuild.
+  const focused = document.activeElement;
+  const restore =
+    focused &&
+    viewEl.contains(focused) &&
+    ['INPUT', 'SELECT', 'TEXTAREA'].includes(focused.tagName) &&
+    focused.getAttribute('aria-label')
+      ? {
+          label: focused.getAttribute('aria-label'),
+          start: focused.selectionStart,
+          end: focused.selectionEnd,
+        }
+      : null;
+
   clear(viewEl);
   viewEl.className = `view${route.name === 'care' ? ' view--wide' : ''}`;
   if (state.issues.length && !dismissedIssues && route.name !== 'settings') {
     renderIssuesBanner(viewEl, state.issues);
   }
   (VIEWS[route.name] ?? today).render(viewEl, route.params, route.name);
+
+  if (restore) {
+    const again = viewEl.querySelector(
+      `input[aria-label="${CSS.escape(restore.label)}"], select[aria-label="${CSS.escape(restore.label)}"], textarea[aria-label="${CSS.escape(restore.label)}"]`,
+    );
+    if (again) {
+      again.focus({ preventScroll: true });
+      if (restore.start != null && typeof again.setSelectionRange === 'function') {
+        try {
+          again.setSelectionRange(restore.start, restore.end ?? restore.start);
+        } catch {
+          /* selection is not supported on every input type */
+        }
+      }
+      return; // keep the user's caret — skip the container focus below
+    }
+  }
   viewEl.focus({ preventScroll: true });
 }
 
@@ -220,6 +253,12 @@ store.subscribe(() => {
   renderView();
 });
 onSettingsChange(() => renderTabBar());
+// In Auto mode an OS scheme flip restyles the page via js/theme.js — the
+// header's sun/moon toggle must follow, or its label promises the opposite
+// of what a tap would do.
+window
+  .matchMedia('(prefers-color-scheme: dark)')
+  .addEventListener('change', () => renderTabBar());
 
 mountSyncStatus(document.getElementById('sync-status'));
 store.load();
