@@ -41,6 +41,7 @@ const SHELL = [
   './js/components/warning-list.js',
   './js/components/event-dialog.js',
   './js/components/plant-row.js',
+  './js/components/photo-img.js',
   './js/components/care-edit-sheet.js',
   './js/components/author-gate.js',
   './shared/effective-care.js',

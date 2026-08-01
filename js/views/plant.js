@@ -24,6 +24,7 @@ import { wateringStatus, lastEventOfType } from '../../shared/schedule.js';
 import { renderMarkdown } from '../../shared/markdown.js';
 import { dayOf, todayString } from '../../shared/dates.js';
 import { plantPhoto, stateChip } from '../components/plant-row.js';
+import { photoImg, rememberFreshPhoto } from '../components/photo-img.js';
 import { ensureAuthor, KNOWN_GARDENERS } from '../components/author-gate.js';
 import { repotPlan } from '../../shared/pot.js';
 import { uniquePlantId } from '../slug.js';
@@ -980,31 +981,8 @@ function openMixSheet(plant, care, draw) {
 }
 
 /* ---------- photos: capture, commit, view ---------- */
-
-// Object URLs for photos committed THIS session: the repo path 404s until
-// GitHub Pages redeploys, so the album serves the local bytes meanwhile.
-const freshPhotoUrls = new Map(); // src path -> object URL
-
-/** Album <img> for a photo event: fresh local bytes when available, and a
- * tinted-leaf placeholder on 404 (mirrors plantPhoto) — never a broken
- * image glyph, e.g. on the other phone before Pages redeploys. */
-function photoImg(event, attrs = {}) {
-  const img = el('img', { src: freshPhotoUrls.get(event.src) ?? event.src, ...attrs });
-  img.addEventListener('error', () => {
-    const holder = el(
-      'span',
-      {
-        class: 'photo-grid__missing',
-        role: 'img',
-        'aria-label': attrs.alt ?? 'Photo not available yet',
-        title: 'Not published yet — it appears once the site redeploys.',
-      },
-      icon('leaf'),
-    );
-    img.replaceWith(holder);
-  });
-  return img;
-}
+// The album <img> + deploy-gap object-URL bridge live in
+// components/photo-img.js, shared with the gallery view.
 
 /** Next collision-free repo path for a photo of this plant today. */
 function photoPath(plant, ext, bump = 0) {
@@ -1075,7 +1053,7 @@ async function openPhotoCommitSheet(plant, file, draw) {
       store.logEvent(plant.id, 'photo', { note: noteInput.value.trim() || null, src: path });
       // Pages serves the file only after the deploy finishes (~1 min); keep
       // the just-committed bytes renderable locally until then.
-      freshPhotoUrls.set(
+      rememberFreshPhoto(
         path,
         URL.createObjectURL(new Blob([bytes], { type: ext === 'webp' ? 'image/webp' : 'image/jpeg' })),
       );
