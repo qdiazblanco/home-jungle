@@ -25,6 +25,10 @@ diary.
   cards on phones.
 - **Plant profiles** — photo, full care sheet, substrate recipe,
   markdown notes and complete event history.
+- **Photo album** — capture a photo from the profile; it is compressed
+  on-device, committed to the repo like everything else, and logged as a
+  photo event (each profile grows a little photo timeline; any shot can
+  become the cover).
 - **Reference vs. observed care** — every parameter keeps what the
   literature says *and* what has actually proven to work, side by side.
   Scheduling always follows the observed value; the source value is
@@ -58,5 +62,4 @@ tested module that runs identically in the browser and in Node.
 
 ## What it may do in the future
 
-- In-app photo capture and upload.
 - Native web-push notifications from the installed PWA itself.

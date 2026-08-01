@@ -24,7 +24,7 @@ const HINTS = {
   check: 'Substrate still damp on watering day — snoozes the schedule a couple of days without logging a watering.',
   treatment: 'Pests, fungus, tonics — say what and why in the note.',
   cutting: 'Taking a cutting for propagation? Add the child plant afterwards and set its parent.',
-  photo: 'Photos are added to the repo img/ folder by hand (see README) — this logs the moment.',
+  photo: 'This logs the moment without an image — to capture and commit a real photo, use “Add photo” on the profile.',
 };
 
 export async function openEventDialog(plant, { type = 'note', onLogged } = {}) {

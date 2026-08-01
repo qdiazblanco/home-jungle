@@ -35,7 +35,7 @@ const CARE_PARAM_ORDER = [
   'humidity', 'feeding', 'feeding_summer', 'feeding_winter', 'substrate_recipe',
   'toxic_to_pets',
 ];
-const EVENT_KEY_ORDER = ['id', 'plantId', 'type', 'date', 'author', 'note'];
+const EVENT_KEY_ORDER = ['id', 'plantId', 'type', 'date', 'author', 'note', 'src'];
 const ROOM_KEY_ORDER = ['id', 'name', 'x', 'y', 'w', 'h'];
 const FURNITURE_KEY_ORDER = ['id', 'roomId', 'kind', 'x', 'y', 'w', 'h'];
 
@@ -116,6 +116,17 @@ export function decodeContent(base64) {
   const binary = atob(base64.replace(/\s/g, ''));
   const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
   return new TextDecoder('utf-8').decode(bytes);
+}
+
+/** Base64 for raw bytes (photo uploads) — chunked like encodeContent. */
+export function encodeBytes(buffer) {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
 }
 
 /* ================= API client & error taxonomy ================= */
@@ -214,13 +225,17 @@ export async function getFile(path) {
   throw new ApiError('validation', `Unexpected contents response for ${path}.`);
 }
 
+function commitAuthor() {
+  const { author } = getSettings();
+  return author
+    ? { name: author, email: `${author.toLowerCase().replace(/[^a-z0-9]+/g, '-')}@home-jungle.local` }
+    : undefined;
+}
+
 /** PUT a data file; returns the new content sha from the response. */
 export async function putFile(path, text, sha, message) {
   const { owner, repo, branch } = coordsOrThrow();
-  const { author } = getSettings();
-  const gitAuthor = author
-    ? { name: author, email: `${author.toLowerCase().replace(/[^a-z0-9]+/g, '-')}@home-jungle.local` }
-    : undefined;
+  const gitAuthor = commitAuthor();
   const res = await apiFetch(`/repos/${owner}/${repo}/contents/${path}`, {
     method: 'PUT',
     body: {
@@ -228,6 +243,28 @@ export async function putFile(path, text, sha, message) {
       content: encodeContent(text),
       branch,
       ...(sha ? { sha } : {}),
+      ...(gitAuthor ? { author: gitAuthor } : {}),
+    },
+  });
+  const json = await res.json();
+  return { sha: json.content?.sha };
+}
+
+/**
+ * Create-only binary PUT for photo files. No sha handling on purpose:
+ * photos are append-only under unique paths, so an existing file surfaces
+ * as a conflict error and the caller picks the next filename. Never queued —
+ * the ops queue stays JSON-only.
+ */
+export async function putBinaryFile(path, buffer, message) {
+  const { owner, repo, branch } = coordsOrThrow();
+  const gitAuthor = commitAuthor();
+  const res = await apiFetch(`/repos/${owner}/${repo}/contents/${path}`, {
+    method: 'PUT',
+    body: {
+      message,
+      content: encodeBytes(buffer),
+      branch,
       ...(gitAuthor ? { author: gitAuthor } : {}),
     },
   });

@@ -11,7 +11,9 @@
 // - Saving an edit stores a field-level diff (patch op), not a snapshot.
 
 import * as store from '../store.js';
-import { el, icon, clear, formField } from '../ui.js';
+import * as gh from '../github.js';
+import { compressPhoto } from '../photos.js';
+import { el, icon, clear, formField, snackbar } from '../ui.js';
 import { PLANT_STATUSES, SUN_NEEDS, PLANT_ICONS } from '../../shared/validate.js';
 import { todayString } from '../../shared/dates.js';
 import { diffPlant } from '../../shared/ops.js';
@@ -190,6 +192,85 @@ export function render(container, params, routeName) {
 
   const uniqueId = (name) => uniquePlantId(name, plantsById);
 
+  /* ---------- cover photo: path input + in-form capture ---------- */
+
+  // Same rules as the profile capture: PUT the image first (never queued),
+  // then reference it — here as the plant's cover path.
+  function photoField() {
+    const pathInput = textInput(() => state.photo, (v) => { state.photo = v || null; });
+    const captureBtn = el(
+      'button',
+      {
+        type: 'button',
+        class: 'btn btn--sm',
+        onclick: () => {
+          const id = editing ? state.id : state.name?.trim() ? uniqueId(state.name.trim()) : null;
+          if (!id) {
+            snackbar({ message: 'Name the plant first — the photo path uses its id.' });
+            return;
+          }
+          if (!navigator.onLine) {
+            snackbar({ message: 'Photos need a connection — try again when back online.' });
+            return;
+          }
+          const input = el('input', {
+            type: 'file',
+            accept: 'image/*',
+            capture: 'environment',
+            style: 'display:none',
+            onchange: async () => {
+              const file = input.files?.[0];
+              input.remove();
+              if (!file) return;
+              captureBtn.disabled = true;
+              captureBtn.textContent = 'Committing…';
+              try {
+                const { bytes, ext, oversized } = await compressPhoto(file);
+                if (oversized) {
+                  snackbar({ message: 'Big photo — committed anyway, but it will weigh on the repo.' });
+                }
+                const day = todayString();
+                const prefix = `img/plants/${id}/${day}-`;
+                const { events } = store.getSnapshot();
+                const taken = events.filter(
+                  (e) => e.plantId === id && e.type === 'photo' && e.src?.startsWith(prefix),
+                ).length;
+                let path;
+                for (let n = taken + 1; ; n++) {
+                  path = `${prefix}${n}.${ext}`;
+                  try {
+                    await gh.putBinaryFile(path, bytes, `photo: ${state.name.trim() || id}`);
+                    break;
+                  } catch (err) {
+                    if (err.kind === 'conflict' && n <= taken + 6) continue;
+                    throw err;
+                  }
+                }
+                state.photo = path;
+                pathInput.value = path;
+                snackbar({ message: 'Photo committed — it becomes the cover when you save.' });
+              } catch (err) {
+                snackbar({ message: `Could not upload the photo: ${err.message}` });
+              } finally {
+                captureBtn.disabled = false;
+                captureBtn.textContent = 'Take / upload photo';
+              }
+            },
+          });
+          document.body.appendChild(input);
+          input.click();
+        },
+      },
+      'Take / upload photo',
+    );
+    return el(
+      'span',
+      { style: 'display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center' },
+      pathInput,
+      captureBtn,
+    );
+  }
+
   const idPreview = el('code', {}, editing ? state.id : '(from the name)');
 
   /* ---------- substrate recipe rows ---------- */
@@ -293,8 +374,8 @@ export function render(container, params, routeName) {
         (v) => { state.parent = v || null; },
         ['— not a cutting —', ...parentOptions.map((p) => p.name)],
       )),
-      field('Photo path', textInput(() => state.photo, (v) => { state.photo = v || null; }),
-        'e.g. img/my-plant.jpg — add the image file to the repo by hand (see README).'),
+      field('Photo path', photoField(),
+        'Cover photo. Capture one here, or type a repo path added by hand.'),
       field('Map icon', selectInput(
         PLANT_ICONS,
         () => state.icon ?? 'pot',

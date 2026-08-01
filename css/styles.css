@@ -951,6 +951,47 @@ textarea {
   font-size: var(--text-xs);
 }
 
+/* ---------- Photos (plant profile) ---------- */
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: var(--sp-2);
+}
+
+.photo-grid button {
+  padding: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--leaf-tint);
+  overflow: hidden;
+  cursor: pointer;
+  aspect-ratio: 1;
+  min-height: var(--tap-target);
+  min-width: var(--tap-target);
+}
+
+.photo-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-preview img,
+.photo-view img {
+  width: 100%;
+  border-radius: var(--radius-md);
+  background: var(--paper-sunken);
+}
+
+.photo-preview {
+  margin-bottom: var(--sp-3);
+}
+
+.photo-view {
+  margin-bottom: var(--sp-3);
+}
+
 /* ---------- Markdown notes ---------- */
 
 .notes-rendered {

@@ -227,6 +227,24 @@ export function validateData(plants, events, opts = {}) {
     if (typeof ev.author !== 'string' || !ev.author) {
       issues.push({ path: `${where}.author`, message: 'Event has no author.' });
     }
+
+    // Photo events reference their committed image via src. The UI always
+    // sets it for new captures; a missing src (pre-capture-era events) or a
+    // path outside img/plants/ is survivable — the moment stays logged but
+    // nothing renders — so both are issues, never errors.
+    if (ev.type === 'photo') {
+      if (ev.src == null) {
+        issues.push({
+          path: `${where}.src`,
+          message: 'Photo event has no image file (src) — the moment is logged but no photo shows.',
+        });
+      } else if (typeof ev.src !== 'string' || !ev.src.startsWith('img/plants/')) {
+        issues.push({
+          path: `${where}.src`,
+          message: `Photo src "${ev.src}" should be a repo path under img/plants/ (e.g. "img/plants/monstera/2026-07-31-1.jpg").`,
+        });
+      }
+    }
   });
 
   return { errors, issues };

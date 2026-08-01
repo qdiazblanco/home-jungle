@@ -241,7 +241,7 @@ function requireAuthor() {
   return getSettings().author || null;
 }
 
-function makeEvent(plantId, type, { note = null, date = null } = {}) {
+function makeEvent(plantId, type, { note = null, date = null, src = null } = {}) {
   const when =
     date && date !== todayString() ? `${date}T12:00:00` : localTimestamp();
   return {
@@ -251,6 +251,8 @@ function makeEvent(plantId, type, { note = null, date = null } = {}) {
     date: when,
     author: requireAuthor() ?? 'Unknown',
     note: note || null,
+    // Only photo events carry a file reference; absent otherwise.
+    ...(src ? { src } : {}),
   };
 }
 
@@ -317,9 +319,11 @@ export async function quickLog(plantIds, type = 'watering', { note = null, date 
   stageWithUndo({ type: 'appendEvents', events }, message);
 }
 
-/** Log any event type from the dialog (explicitly confirmed — no grace). */
-export function logEvent(plantId, type, { note = null, date = null } = {}) {
-  gh.enqueue({ type: 'appendEvents', events: [makeEvent(plantId, type, { note, date })] });
+/** Log any event type from the dialog (explicitly confirmed — no grace).
+ * `src` (photo events) must reference an ALREADY-uploaded file — the queue
+ * carries JSON only, never image data. */
+export function logEvent(plantId, type, { note = null, date = null, src = null } = {}) {
+  gh.enqueue({ type: 'appendEvents', events: [makeEvent(plantId, type, { note, date, src })] });
   notify();
 }
 
