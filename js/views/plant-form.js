@@ -394,7 +394,18 @@ export function render(container, params, routeName) {
           if (v === 'pot') delete state.icon;
           else state.icon = v;
         },
-        ['Potted (default)', 'Bushy', 'Small tree', 'Cactus / upright', 'Hanging'],
+        [
+          'Potted (default)',
+          'Bushy',
+          'Small tree',
+          'Cactus',
+          'Hanging',
+          'Succulent rosette',
+          'Aroid leaf',
+          'Fern',
+          'Palm',
+          'Snake plant',
+        ],
       ), 'The silhouette shown on the house map.'),
     ),
 

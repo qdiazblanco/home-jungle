@@ -84,7 +84,7 @@ export function serializeFile(path, data) {
     canonical = data.map(canonicalPlant);
   } else if (path === HOUSE_PATH) {
     // Preserve unknown keys (hand-edits) like the other serializers do.
-    canonical = orderKeys(data ?? {}, ['grid', 'rooms', 'furniture', 'placements']);
+    canonical = orderKeys(data ?? {}, ['grid', 'rooms', 'furniture', 'placements', 'spots']);
     canonical.grid = orderKeys({ w: 24, h: 16, ...(data?.grid ?? {}) }, ['w', 'h']);
     canonical.rooms = (data?.rooms ?? []).map((room) => orderKeys(room, ROOM_KEY_ORDER));
     canonical.furniture = (Array.isArray(data?.furniture) ? data.furniture : [])
@@ -92,6 +92,11 @@ export function serializeFile(path, data) {
       .map((piece) => orderKeys(piece, FURNITURE_KEY_ORDER));
     canonical.placements = orderKeys(
       data?.placements && typeof data.placements === 'object' ? data.placements : {},
+      [],
+    );
+    // spots: plantId -> [x, y] floor position, relative to the plant's room.
+    canonical.spots = orderKeys(
+      data?.spots && typeof data.spots === 'object' ? data.spots : {},
       [],
     );
   } else {

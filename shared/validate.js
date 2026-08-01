@@ -24,7 +24,18 @@ export const EVENT_TYPES = [
   'photo',
 ];
 export const SUN_NEEDS = ['low', 'medium', 'high'];
-export const PLANT_ICONS = ['pot', 'bushy', 'tree', 'cactus', 'hanging'];
+export const PLANT_ICONS = [
+  'pot',
+  'bushy',
+  'tree',
+  'cactus',
+  'hanging',
+  'succulent',
+  'aroid',
+  'fern',
+  'palm',
+  'snake',
+];
 
 /** Canonical care parameters — observed values for these are legitimate even
  * when the reference layer has no matching entry (the quick-edit sheet can

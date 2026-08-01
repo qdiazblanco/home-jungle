@@ -35,6 +35,7 @@ describe('canonical serializer', () => {
       rooms: [{ id: 'a', name: 'A', x: 0, y: 0, w: 5, h: 5, floor: 'tiles' }],
       furniture: [{ id: 'f1', roomId: 'a', kind: 'table', x: 1, y: 1, w: 3, h: 2, wood: 'oak' }],
       placements: { 'some-plant': 'f1' },
+      spots: { 'floor-plant': [2.5, 3] },
       architect: 'Pepa',
     };
     const parsed = JSON.parse(gh.serializeFile('data/house.json', house));
@@ -42,6 +43,7 @@ describe('canonical serializer', () => {
     assert.equal(parsed.rooms[0].floor, 'tiles');
     assert.equal(parsed.furniture[0].wood, 'oak');
     assert.equal(parsed.placements['some-plant'], 'f1');
+    assert.deepEqual(parsed.spots['floor-plant'], [2.5, 3]);
     assert.equal(parsed.architect, 'Pepa');
   });
 
@@ -64,11 +66,12 @@ describe('canonical serializer', () => {
     assert.equal(gh.encodeBytes(bytes.buffer), Buffer.from(bytes).toString('base64'));
   });
 
-  it('defaults missing furniture/placements to empty containers', () => {
+  it('defaults missing furniture/placements/spots to empty containers', () => {
     const parsed = JSON.parse(
       gh.serializeFile('data/house.json', { grid: { w: 10, h: 10 }, rooms: [] }),
     );
     assert.deepEqual(parsed.furniture, []);
     assert.deepEqual(parsed.placements, {});
+    assert.deepEqual(parsed.spots, {});
   });
 });

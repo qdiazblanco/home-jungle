@@ -67,7 +67,7 @@ function wallPieces(len, spans) {
  *   onYaw } — plantSprite(plant, status) builds the billboard's inner
  *   element (with its own tip/click behavior); onYaw(deg) feeds the compass.
  */
-export function render3D(host, { gridW, gridH, rooms, model, statusOf, plantSprite, onYaw }) {
+export function render3D(host, { gridW, gridH, rooms, model, spots, statusOf, plantSprite, onYaw }) {
   host.textContent = '';
   const stage = el('div', { class: 'd3-stage' });
   host.appendChild(stage);
@@ -155,18 +155,12 @@ export function render3D(host, { gridW, gridH, rooms, model, statusOf, plantSpri
         }
       }
 
-      /* floor plants as billboards (same capacity rules as the plan view) */
+      /* floor plants as billboards: hand-placed spots first (same data as
+         the plan view), the rest on the capacity grid */
       const roomPlants = model?.floorByRoom.get(roomKey(room.name)) ?? [];
-      const pad = 0.9;
-      const step = 1.9;
-      const cols = Math.max(1, Math.floor((room.w - pad * 2) / step));
-      const maxRows = Math.max(1, Math.floor((room.h - 1.6 - 0.7) / step));
-      const capacity = cols * maxRows;
-      roomPlants.slice(0, capacity).forEach((plant, index) => {
-        const col = index % cols;
-        const rowIndex = Math.floor(index / cols);
-        const cx = room.x + pad + 0.5 + col * step;
-        const cy = Math.min(room.y + 1.6 + rowIndex * step, room.y + room.h - 0.7);
+      const clampN = (n, lo, hi) => Math.min(Math.max(n, lo), hi);
+      const autoPlants = [];
+      const putBillboard = (plant, cx, cy) => {
         const anchor = el('div', {
           class: 'd3-plant-anchor',
           style: `left:${px(cx)}px; top:${px(cy)}px;`,
@@ -177,8 +171,32 @@ export function render3D(host, { gridW, gridH, rooms, model, statusOf, plantSpri
         anchor.appendChild(sprite);
         scene.appendChild(anchor);
         billboards.push(sprite);
+      };
+      for (const plant of roomPlants) {
+        const s = spots?.[plant.id];
+        if (Array.isArray(s) && Number.isFinite(Number(s[0])) && Number.isFinite(Number(s[1]))) {
+          putBillboard(
+            plant,
+            room.x + clampN(Number(s[0]), 0.6, Math.max(0.6, room.w - 0.6)),
+            room.y + clampN(Number(s[1]), 0.7, Math.max(0.7, room.h - 0.5)),
+          );
+        } else {
+          autoPlants.push(plant);
+        }
+      }
+      const pad = 0.9;
+      const step = 1.9;
+      const cols = Math.max(1, Math.floor((room.w - pad * 2) / step));
+      const maxRows = Math.max(1, Math.floor((room.h - 1.6 - 0.7) / step));
+      const capacity = cols * maxRows;
+      autoPlants.slice(0, capacity).forEach((plant, index) => {
+        const col = index % cols;
+        const rowIndex = Math.floor(index / cols);
+        const cx = room.x + pad + 0.5 + col * step;
+        const cy = Math.min(room.y + 1.6 + rowIndex * step, room.y + room.h - 0.7);
+        putBillboard(plant, cx, cy);
       });
-      if (roomPlants.length > capacity) {
+      if (autoPlants.length > capacity) {
         scene.appendChild(
           el(
             'div',
@@ -186,7 +204,7 @@ export function render3D(host, { gridW, gridH, rooms, model, statusOf, plantSpri
               class: 'd3-label d3-label--more',
               style: `left:${px(room.x + room.w - 1.4)}px; top:${px(room.y + room.h - 1.1)}px; font-size:${Math.max(9, unit * 0.6)}px;`,
             },
-            `+${roomPlants.length - capacity}`,
+            `+${autoPlants.length - capacity}`,
           ),
         );
       }
@@ -221,6 +239,18 @@ export function render3D(host, { gridW, gridH, rooms, model, statusOf, plantSpri
           style: `left:${px(absX)}px; top:${px(absY)}px; width:${px(w)}px; height:${px(h)}px; transform: translateZ(${px(spec.z)}px);`,
         }),
       );
+      if (spec.screen) {
+        // A dark panel standing on the unit (translateZ to the top, then
+        // rotateX(90) stands it up — same origin-0-0 trick as the walls).
+        scene.appendChild(
+          el('div', {
+            class: 'd3-furn__screen',
+            style:
+              `left:${px(absX + 0.3)}px; top:${px(absY + 0.3)}px; width:${px(Math.max(0.6, w - 0.6))}px;` +
+              ` height:${px(1.05)}px; transform: translateZ(${px(spec.z)}px) rotateX(90deg);`,
+          }),
+        );
+      }
 
       const plantsOn = model?.onFurniture.get(piece.id) ?? [];
       const spread = Math.max(1, Math.floor(w / 1.1));

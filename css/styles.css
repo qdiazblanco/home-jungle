@@ -1479,9 +1479,9 @@ code {
   touch-action: none; /* editing owns the gestures; view mode scrolls freely */
 }
 
-/* While editing, room surfaces own the pointer — glyphs must not steal grabs. */
-.bp--editing .bp-plant {
-  pointer-events: none;
+/* While editing, floor glyphs are draggable to their exact spot. */
+.bp--editing .bp-plant--draggable {
+  cursor: grab;
 }
 
 .bp-slab {
@@ -1492,13 +1492,13 @@ code {
 .bp-walls {
   fill: none;
   stroke: var(--ink);
-  stroke-width: 0.5;
+  stroke-width: 0.3;
   stroke-linejoin: round;
 }
 
 .bp-room__rect {
   stroke: var(--ink);
-  stroke-width: 0.26;
+  stroke-width: 0.15;
   stroke-linejoin: round;
 }
 
@@ -1528,12 +1528,12 @@ code {
 
 .bp-window__gap {
   stroke: var(--paper-raised);
-  stroke-width: 0.3;
+  stroke-width: 0.22;
 }
 
 .bp-window__glass {
   stroke: var(--glass-line);
-  stroke-width: 0.12;
+  stroke-width: 0.1;
 }
 
 .bp-room__label {
@@ -1560,6 +1560,27 @@ code {
 .bp-furn--shelf { fill: var(--wood-2); }
 .bp-furn--stand { fill: var(--wood-3); }
 .bp-furn--windowsill { fill: var(--sill-top); }
+.bp-furn--bookshelf { fill: var(--wood-3); }
+.bp-furn--tv { fill: var(--wood-2); }
+
+/* inert furniture detailing */
+.bp-furn__screen {
+  fill: var(--screen);
+  pointer-events: none;
+}
+
+.bp-furn__plank {
+  stroke: rgba(var(--ink-rgb), 0.3);
+  stroke-width: 0.06;
+  pointer-events: none;
+}
+
+.bp-furn__inner {
+  fill: none;
+  stroke: rgba(var(--ink-rgb), 0.14);
+  stroke-width: 0.06;
+  pointer-events: none;
+}
 
 .bp--editing .bp-furn {
   cursor: grab;
@@ -1667,6 +1688,7 @@ code {
   touch-action: none;
   cursor: grab;
   border-radius: var(--radius-md);
+  background: radial-gradient(ellipse at 50% 30%, transparent 40%, rgba(var(--shadow-rgb), 0.06));
 }
 
 .d3-stage:active {
@@ -1715,14 +1737,15 @@ code {
 .d3-wall {
   transform-origin: 0 0;
   backface-visibility: visible;
-  background: var(--wall-face);
+  /* translucent gradient over the token = soft vertical shading, any theme */
+  background: linear-gradient(rgba(255, 255, 255, 0.09), rgba(var(--shadow-rgb), 0.05)), var(--wall-face);
   border-top: 1.5px solid rgba(var(--ink-rgb), 0.55);
   border-bottom: 1px solid rgba(var(--ink-rgb), 0.25);
   box-sizing: border-box;
 }
 
 .d3-wall--v {
-  background: var(--wall-side); /* fake side lighting */
+  background: linear-gradient(rgba(255, 255, 255, 0.05), rgba(var(--shadow-rgb), 0.08)), var(--wall-side); /* fake side lighting */
 }
 
 .d3-wall--glass {
@@ -1780,6 +1803,30 @@ code {
 .d3-furn--stand.d3-furn__top { background: var(--wood-3); }
 .d3-furn--windowsill.d3-furn__side { background: var(--sill-side); }
 .d3-furn--windowsill.d3-furn__top { background: var(--sill-top); }
+.d3-furn--tv.d3-furn__side { background: var(--wood-2); }
+.d3-furn--tv.d3-furn__top { background: var(--wood-1); }
+.d3-furn--bookshelf.d3-furn__side {
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--wood-3) 0 20%,
+    rgba(var(--ink-rgb), 0.35) 20% 23%,
+    var(--wood-2) 23% 45%,
+    rgba(var(--ink-rgb), 0.35) 45% 48%,
+    var(--wood-3) 48% 72%,
+    rgba(var(--ink-rgb), 0.35) 72% 75%,
+    var(--wood-2) 75% 100%
+  );
+}
+.d3-furn--bookshelf.d3-furn__top { background: var(--wood-1); }
+
+.d3-furn__screen {
+  transform-origin: 0 0;
+  backface-visibility: visible;
+  box-sizing: border-box;
+  background: linear-gradient(rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.02) 45%), var(--screen);
+  border: 1px solid rgba(var(--ink-rgb), 0.4);
+  border-radius: 2px;
+}
 
 .d3-plant-anchor {
   width: 0;
