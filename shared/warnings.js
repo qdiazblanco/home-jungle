@@ -15,12 +15,66 @@
 // warnings (seasonal light, feeding transitions) key off the real month in
 // `today`, so a manual season override never fires feeding-stop in July.
 
-import { monthOf, yearOf } from './dates.js';
+import { dayOf, daysBetween, monthOf, yearOf } from './dates.js';
 import { effectiveCare } from './effective-care.js';
-import { wateringStatus } from './schedule.js';
+import { wateringStatus, wateringIntervalFor } from './schedule.js';
 import { seasonForDay } from './season.js';
 
 export const SEVERITY_RANK = { urgent: 2, warn: 1, info: 0 };
+
+/* Observed-interval suggestion thresholds: at least this many consecutive
+   watering→watering gaps ending in the current season, each at least
+   (effective interval + slack) long, before the app dares to suggest. */
+const SUGGESTION_MIN_GAPS = 2;
+const SUGGESTION_SLACK_DAYS = 2;
+
+/**
+ * When the log shows the plant consistently going longer than its effective
+ * interval — and the latest long gap includes a "still moist" check, i.e. a
+ * deliberate judgment rather than neglect — suggest the median gap as the
+ * observed interval for the season. NEVER auto-applied: recording an
+ * observed value stays a human action in the care edit sheet.
+ */
+function intervalSuggestion(plant, events, today, season) {
+  const interval = wateringIntervalFor(plant, season);
+  if (!interval) return null;
+
+  const days = [
+    ...new Set(
+      events
+        .filter((e) => e.plantId === plant.id && e.type === 'watering')
+        .map((e) => dayOf(e.date))
+        .filter((d) => d && d <= today),
+    ),
+  ].sort();
+
+  const gaps = [];
+  for (let i = 1; i < days.length; i++) {
+    // The whole gap must lie inside the season: a gap that merely ENDS in
+    // summer can start in winter (the first spring watering after the rest
+    // period) and would skew the median absurdly.
+    if (seasonForDay(days[i]) !== season || seasonForDay(days[i - 1]) !== season) continue;
+    const length = daysBetween(days[i - 1], days[i]);
+    if (length >= interval + SUGGESTION_SLACK_DAYS) {
+      gaps.push({ start: days[i - 1], end: days[i], length });
+    }
+  }
+  if (gaps.length < SUGGESTION_MIN_GAPS) return null;
+
+  const latest = gaps[gaps.length - 1];
+  const checkedGap = events.some((e) => {
+    if (e.plantId !== plant.id || e.type !== 'check') return false;
+    const day = dayOf(e.date);
+    return day && day > latest.start && day <= latest.end;
+  });
+  if (!checkedGap) return null;
+
+  const sorted = gaps.map((g) => g.length).sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  const suggested = Math.round(median);
+  return suggested > interval ? { suggested, interval, gapCount: gaps.length } : null;
+}
 
 const SEPTEMBER = 9;
 const MARCH = 3;
@@ -51,6 +105,19 @@ export function getWarnings({ plants, events, today, season = null }) {
           overdueDays: -status.dueIn,
           season: effectiveSeason,
         },
+      });
+    }
+
+    const suggestion = intervalSuggestion(plant, events, today, effectiveSeason);
+    if (suggestion) {
+      warnings.push({
+        // Keyed by plant + season + value: the digest's fire-once dedup
+        // re-fires only when the suggestion itself changes.
+        id: `interval-suggestion:${plant.id}:${effectiveSeason}:${suggestion.suggested}`,
+        type: 'interval-suggestion',
+        plantId: plant.id,
+        severity: 'info',
+        data: { ...suggestion, season: effectiveSeason },
       });
     }
 
@@ -111,6 +178,13 @@ export function formatWarning(warning, plant = null) {
       return (
         `It's been ${daysSince} days since you watered ${name} — ` +
         `check the substrate moisture (${season} rhythm is every ${interval} days).`
+      );
+    }
+    case 'interval-suggestion': {
+      const { suggested, interval, season } = warning.data;
+      return (
+        `${name} keeps doing fine for ~${suggested} days between waterings this ${season} ` +
+        `(the schedule says ${interval}) — consider recording ${suggested} days as its observed ${season} rhythm.`
       );
     }
     case 'seasonal-light':

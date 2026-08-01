@@ -592,6 +592,7 @@ function handleFlushError(err) {
 
 const TYPE_VERBS = {
   watering: 'water',
+  check: 'still moist',
   feeding: 'feed',
   misting: 'mist',
   pruning: 'prune',

@@ -9,6 +9,7 @@ import { ensureAuthor } from './author-gate.js';
 
 const TYPES = [
   { type: 'watering', label: 'Watering', iconName: 'water' },
+  { type: 'check', label: 'Still moist', iconName: 'check' },
   { type: 'feeding', label: 'Feeding', iconName: 'feeding' },
   { type: 'misting', label: 'Misting', iconName: 'misting' },
   { type: 'repotting', label: 'Repotting', iconName: 'repotting' },
@@ -20,6 +21,7 @@ const TYPES = [
 ];
 
 const HINTS = {
+  check: 'Substrate still damp on watering day — snoozes the schedule a couple of days without logging a watering.',
   treatment: 'Pests, fungus, tonics — say what and why in the note.',
   cutting: 'Taking a cutting for propagation? Add the child plant afterwards and set its parent.',
   photo: 'Photos are added to the repo img/ folder by hand (see README) — this logs the moment.',

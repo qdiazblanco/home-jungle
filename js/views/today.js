@@ -39,7 +39,8 @@ function drawContent(root, draw) {
   const today = store.today();
   const season = store.currentSeason();
   const canEdit = isGardener();
-  const pending = store.pendingPlantIds();
+  const pendingWater = store.pendingPlantIds('watering');
+  const pendingCheck = store.pendingPlantIds('check');
 
   const active = plants.filter((p) => p.status === 'active');
   const entries = active
@@ -145,9 +146,22 @@ function drawContent(root, draw) {
         {
           iconName: 'water',
           label: 'Water',
-          done: pending.has(plant.id),
+          done: pendingWater.has(plant.id),
           onClick: () => store.quickLog([plant.id], 'watering'),
         },
+        // "Still moist": defer without lying to the log. Deliberately absent
+        // from multi-select — batch watering makes sense, batch soil
+        // judgment doesn't.
+        ...(['due', 'overdue'].includes(status.state)
+          ? [
+              {
+                iconName: 'check',
+                label: 'Still moist',
+                done: pendingCheck.has(plant.id),
+                onClick: () => store.quickLog([plant.id], 'check'),
+              },
+            ]
+          : []),
       ],
     });
 

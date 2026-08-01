@@ -1371,6 +1371,7 @@ code {
 }
 
 .cal-dot--watering { background: var(--info); }
+.cal-dot--check { background: var(--state-unknown); }
 .cal-dot--feeding { background: var(--state-soon); }
 .cal-dot--repotting { background: var(--terracotta); }
 .cal-dot--treatment { background: var(--state-overdue); }

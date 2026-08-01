@@ -5,6 +5,7 @@ import { formatWarning } from '../../shared/warnings.js';
 
 const TYPE_ICONS = {
   'watering-overdue': 'water',
+  'interval-suggestion': 'water',
   'seasonal-light': 'sun',
   'feeding-resume': 'feeding',
   'feeding-stop': 'feeding',

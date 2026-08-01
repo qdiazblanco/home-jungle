@@ -5,6 +5,7 @@ import {
   wateringIntervalFor,
   wateringStatus,
   compareUrgency,
+  CHECK_SNOOZE_DAYS,
 } from '../shared/schedule.js';
 import { makePlant, makeEvent } from './fixtures.js';
 
@@ -145,6 +146,71 @@ describe('wateringStatus', () => {
     const events = [makeEvent({ date: '2026-07-12T10:00:00' })]; // 10 days ago
     assert.equal(wateringStatus(plant, events, TODAY, 'summer').state, 'overdue');
     assert.equal(wateringStatus(plant, events, TODAY, 'winter').state, 'fine');
+  });
+});
+
+describe('wateringStatus — "still moist" soil checks', () => {
+  // The brief's worked example: interval 10, watered 12 days ago → overdue;
+  // a check today lifts it to fine (dueIn 2), then the nag walks back in.
+  const tenDayPlant = () =>
+    makePlant({ care: { reference: { watering_days_summer: 10 }, observed: {} } });
+  const watered = makeEvent({ id: 'w', date: '2026-07-10T10:00:00' }); // 12 days before the 22nd
+
+  it('snoozes an overdue plant for CHECK_SNOOZE_DAYS, then resumes the nag', () => {
+    assert.equal(CHECK_SNOOZE_DAYS, 2);
+    const plant = tenDayPlant();
+    const check = makeEvent({ id: 'c', type: 'check', date: '2026-07-22T09:00:00' });
+
+    assert.equal(wateringStatus(plant, [watered], TODAY, 'summer').state, 'overdue');
+
+    const day = (today) => wateringStatus(plant, [watered, check], today, 'summer');
+    assert.equal(day('2026-07-22').state, 'fine'); // dueIn 2
+    assert.equal(day('2026-07-22').dueIn, 2);
+    assert.equal(day('2026-07-23').state, 'soon'); // dueIn 1
+    assert.equal(day('2026-07-24').state, 'due'); // dueIn 0
+    assert.equal(day('2026-07-25').state, 'overdue'); // nag resumes
+  });
+
+  it('keeps daysSince honest and exposes the check as the active anchor', () => {
+    const plant = tenDayPlant();
+    const check = makeEvent({ id: 'c', type: 'check', date: '2026-07-22T09:00:00' });
+    const s = wateringStatus(plant, [watered, check], TODAY, 'summer');
+    assert.equal(s.daysSince, 12); // days since the WATERING, not the check
+    assert.equal(s.lastWatering, '2026-07-10');
+    assert.equal(s.lastCheck, '2026-07-22');
+  });
+
+  it('handles backdated checks (snooze window counted from the check day)', () => {
+    const plant = tenDayPlant();
+    const backdated = makeEvent({ id: 'c', type: 'check', date: '2026-07-21T12:00:00' });
+    const s = wateringStatus(plant, [watered, backdated], TODAY, 'summer');
+    assert.equal(s.dueIn, 1); // 2 − 1 day since the check
+    assert.equal(s.state, 'soon');
+  });
+
+  it('ignores a check older than the last watering', () => {
+    const plant = tenDayPlant();
+    const stale = makeEvent({ id: 'c', type: 'check', date: '2026-07-05T10:00:00' });
+    const s = wateringStatus(plant, [watered, stale], TODAY, 'summer');
+    assert.equal(s.state, 'overdue');
+    assert.equal(s.lastCheck, null);
+  });
+
+  it('never rescues an unknown plant — a check is not a watering', () => {
+    const plant = tenDayPlant();
+    const check = makeEvent({ id: 'c', type: 'check', date: '2026-07-22T09:00:00' });
+    const s = wateringStatus(plant, [check], TODAY, 'summer');
+    assert.equal(s.state, 'unknown');
+    assert.equal(s.reason, 'never-watered');
+  });
+
+  it('never lowers dueIn for a freshly watered plant', () => {
+    const plant = tenDayPlant();
+    const fresh = makeEvent({ id: 'w2', date: '2026-07-21T10:00:00' }); // 1 day ago
+    const check = makeEvent({ id: 'c', type: 'check', date: '2026-07-22T09:00:00' });
+    const s = wateringStatus(plant, [fresh, check], TODAY, 'summer');
+    assert.equal(s.dueIn, 9); // max(9, 2) — the snooze can only lift
+    assert.equal(s.state, 'fine');
   });
 });
 

@@ -148,6 +148,7 @@ export function applyOps(data, ops) {
 
 const EVENT_LABELS = {
   watering: 'watering',
+  check: 'soil check',
   feeding: 'feeding',
   repotting: 'repotting',
   pruning: 'pruning',

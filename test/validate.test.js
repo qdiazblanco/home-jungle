@@ -112,7 +112,8 @@ describe('validateData — issues (render + banner)', () => {
 describe('exported enums', () => {
   it('match the brief', () => {
     assert.deepEqual(PLANT_STATUSES, ['active', 'gifted', 'deceased', 'wishlist']);
-    assert.equal(EVENT_TYPES.length, 9);
+    assert.equal(EVENT_TYPES.length, 10); // the nine from the brief + 'check'
+    assert.ok(EVENT_TYPES.includes('check'));
     assert.deepEqual(SUN_NEEDS, ['low', 'medium', 'high']);
   });
 });

@@ -163,6 +163,7 @@ export function wateringMeta(status) {
   if (!status) return [];
   const meta = [];
   if (status.lastWatering) meta.push(`watered ${fmtRelativeDay(status.lastWatering)}`);
+  if (status.lastCheck) meta.push(`checked ${fmtRelativeDay(status.lastCheck)}`);
   if (status.interval) meta.push(`every ${status.interval} d`);
   return meta;
 }

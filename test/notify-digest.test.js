@@ -47,6 +47,28 @@ describe('buildDigest', () => {
     assert.doesNotMatch(second.text, /October is coming/);
   });
 
+  it('fires an interval suggestion once, keyed by plant + season + value', () => {
+    const plant = makePlant(); // summer interval 7
+    const events = [
+      makeEvent({ id: 'w-0', date: '2026-07-01T10:00:00' }),
+      makeEvent({ id: 'w-1', date: '2026-07-10T10:00:00' }),
+      makeEvent({ id: 'w-2', date: '2026-07-19T10:00:00' }),
+      makeEvent({ id: 'c', type: 'check', date: '2026-07-17T09:00:00' }),
+    ];
+    const plantsById = new Map([[plant.id, plant]]);
+    const warnings = getWarnings({ plants: [plant], events, today: '2026-07-20' });
+    assert.ok(warnings.some((w) => w.type === 'interval-suggestion'), 'setup');
+
+    const first = buildDigest({ warnings, plantsById, previousInfoIds: [] });
+    assert.equal(first.send, true);
+    assert.match(first.text, /consider recording 9 days/);
+    assert.ok(first.infoIds.includes('interval-suggestion:test-plant:summer:9'));
+
+    // Next day, same suggestion → suppressed like the month notices.
+    const second = buildDigest({ warnings, plantsById, previousInfoIds: first.infoIds });
+    assert.equal(second.send, false);
+  });
+
   it('orders urgent before warn before info', () => {
     const thirsty = makePlant({ id: 'thirsty' }); // very overdue → urgent
     const sunny = makePlant({ id: 'sunny', name: 'Sunny' });

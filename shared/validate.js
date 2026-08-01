@@ -13,6 +13,7 @@ import { dayOf } from './dates.js';
 export const PLANT_STATUSES = ['active', 'gifted', 'deceased', 'wishlist'];
 export const EVENT_TYPES = [
   'watering',
+  'check', // "still moist" — snoozes the schedule without logging a watering
   'feeding',
   'repotting',
   'pruning',

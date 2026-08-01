@@ -31,6 +31,7 @@ import { FURNITURE_KINDS } from './map.js';
 
 const EVENT_ICONS = {
   watering: 'water',
+  check: 'check',
   feeding: 'feeding',
   repotting: 'repotting',
   pruning: 'pruning',
@@ -99,7 +100,8 @@ function drawContent(root, id, draw) {
   const season = store.currentSeason();
   const status = wateringStatus(plant, events, today, season);
   const care = effectiveCare(plant);
-  const pending = store.pendingPlantIds();
+  const pending = store.pendingPlantIds('watering');
+  const pendingCheck = store.pendingPlantIds('check');
 
   /* ---------- header ---------- */
 
@@ -212,6 +214,18 @@ function drawContent(root, id, draw) {
           icon('water'),
           pending.has(plant.id) ? 'Watered ✓' : 'Water now',
         ),
+        status && ['due', 'overdue'].includes(status.state)
+          ? el(
+              'button',
+              {
+                class: 'btn',
+                disabled: pendingCheck.has(plant.id),
+                onclick: () => store.quickLog([plant.id], 'check'),
+              },
+              icon('check'),
+              pendingCheck.has(plant.id) ? 'Checked ✓' : 'Still moist',
+            )
+          : null,
         el(
           'button',
           { class: 'btn', onclick: () => openEventDialog(plant, { type: 'note' }) },

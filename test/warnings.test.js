@@ -104,6 +104,90 @@ describe('getWarnings — calendar warnings', () => {
   });
 });
 
+describe('getWarnings — observed-interval suggestion', () => {
+  // Fixture plant: summer interval 7. Two consecutive 9-day gaps (≥ 7+2)
+  // ending in summer, the latest containing a "still moist" check.
+  const wateringsAt = (...dates) =>
+    dates.map((date, i) => makeEvent({ id: `w-${i}`, date: `${date}T10:00:00` }));
+
+  const suggestionsFor = (events, today = JULY) =>
+    getWarnings({ plants: [makePlant()], events, today }).filter(
+      (w) => w.type === 'interval-suggestion',
+    );
+
+  it('suggests the median gap when ≥2 long gaps exist and the latest was checked', () => {
+    const events = [
+      ...wateringsAt('2026-07-01', '2026-07-10', '2026-07-19'),
+      makeEvent({ id: 'c', type: 'check', date: '2026-07-17T09:00:00' }),
+    ];
+    const [w] = suggestionsFor(events);
+    assert.ok(w, 'expected an interval-suggestion');
+    assert.equal(w.id, 'interval-suggestion:test-plant:summer:9');
+    assert.equal(w.severity, 'info');
+    assert.deepEqual(w.data, { suggested: 9, interval: 7, gapCount: 2, season: 'summer' });
+  });
+
+  it('stays silent without a check in the most recent long gap', () => {
+    const events = wateringsAt('2026-07-01', '2026-07-10', '2026-07-19');
+    assert.equal(suggestionsFor(events).length, 0);
+  });
+
+  it('a check in an OLDER gap does not count', () => {
+    const events = [
+      ...wateringsAt('2026-07-01', '2026-07-10', '2026-07-19'),
+      makeEvent({ id: 'c', type: 'check', date: '2026-07-05T09:00:00' }), // first gap
+    ];
+    assert.equal(suggestionsFor(events).length, 0);
+  });
+
+  it('needs at least two qualifying gaps', () => {
+    const events = [
+      ...wateringsAt('2026-07-10', '2026-07-19'), // one 9-day gap
+      makeEvent({ id: 'c', type: 'check', date: '2026-07-17T09:00:00' }),
+    ];
+    assert.equal(suggestionsFor(events).length, 0);
+  });
+
+  it('gaps under interval + 2 days do not qualify', () => {
+    const events = [
+      ...wateringsAt('2026-07-03', '2026-07-11', '2026-07-19'), // two 8-day gaps (< 9)
+      makeEvent({ id: 'c', type: 'check', date: '2026-07-17T09:00:00' }),
+    ];
+    assert.equal(suggestionsFor(events).length, 0);
+  });
+
+  it('takes the median of an odd gap set (9, 9, 13 → 9)', () => {
+    const events = [
+      ...wateringsAt('2026-06-19', '2026-06-28', '2026-07-07', '2026-07-20'),
+      makeEvent({ id: 'c', type: 'check', date: '2026-07-15T09:00:00' }),
+    ];
+    const [w] = suggestionsFor(events);
+    assert.equal(w.data.suggested, 9);
+    assert.equal(w.data.gapCount, 3);
+  });
+
+  it('only counts gaps ending in the current season', () => {
+    // Two long gaps ending in winter months + one in summer → below threshold.
+    const events = [
+      ...wateringsAt('2026-01-01', '2026-01-10', '2026-01-19', '2026-07-10', '2026-07-19'),
+      makeEvent({ id: 'c', type: 'check', date: '2026-07-17T09:00:00' }),
+    ];
+    assert.equal(suggestionsFor(events).length, 0);
+  });
+
+  it('formats actionable prose, never auto-applies anything', () => {
+    const events = [
+      ...wateringsAt('2026-07-01', '2026-07-10', '2026-07-19'),
+      makeEvent({ id: 'c', type: 'check', date: '2026-07-17T09:00:00' }),
+    ];
+    const [w] = suggestionsFor(events);
+    assert.match(
+      formatWarning(w, makePlant()),
+      /consider recording 9 days as its observed summer rhythm/,
+    );
+  });
+});
+
 describe('getWarnings — determinism (Phase 2 dedup contract)', () => {
   it('returns identical ids and order across calls with the same inputs', () => {
     const plants = [makePlant({ id: 'b-plant' }), makePlant({ id: 'a-plant' })];

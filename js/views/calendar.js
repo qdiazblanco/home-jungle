@@ -15,6 +15,7 @@ const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
 const EVENT_ICONS = {
   watering: 'water',
+  check: 'check',
   feeding: 'feeding',
   repotting: 'repotting',
   pruning: 'pruning',

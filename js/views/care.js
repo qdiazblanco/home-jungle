@@ -92,7 +92,7 @@ function drawContent(root, draw) {
   const today = store.today();
   const season = store.currentSeason();
   const canEdit = isGardener();
-  const pending = store.pendingPlantIds();
+  const pending = store.pendingPlantIds('watering');
 
   root.appendChild(
     el(

@@ -14,7 +14,12 @@ diary.
   waterings, seasonal light checks, feeding reminders.
 - **One-tap logging** — tap to water (with a short undo window), or
   select several plants and log a whole watering round as one commit.
-  Nine event types, backdating included.
+  Ten event types, backdating included.
+- **"Still moist"** — real watering is a finger-in-the-substrate call.
+  A soil check on a due plant snoozes the schedule a couple of days
+  without polluting the watering history; when the log keeps proving a
+  plant drinks slower than the books say, the app suggests an observed
+  rhythm (never applies it by itself).
 - **Care table** — every plant at a glance: last/next watering, feeding,
   light, room; inline actions and quick edits. Collapses into compact
   cards on phones.

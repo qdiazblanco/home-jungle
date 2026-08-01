@@ -72,13 +72,23 @@ export function getSnapshot() {
   return snapshotCache;
 }
 
-/** Plant ids with an op currently pending or in grace (for inert buttons). */
-export function pendingPlantIds() {
+/**
+ * Plant ids with an op currently pending or in grace (for inert buttons).
+ * Pass an event type ('watering', 'check', …) to match only pending events
+ * of that type — so a "still moist" tap doesn't make the water button ✓.
+ */
+export function pendingPlantIds(eventType = null) {
   const ids = new Set();
   const collect = (op) => {
-    if (op.type === 'appendEvents') op.events.forEach((e) => ids.add(e.plantId));
-    if (op.type === 'patchPlant') ids.add(op.plantId);
-    if (op.type === 'createPlant') ids.add(op.plant.id);
+    if (op.type === 'appendEvents') {
+      op.events.forEach((e) => {
+        if (!eventType || e.type === eventType) ids.add(e.plantId);
+      });
+    }
+    if (!eventType) {
+      if (op.type === 'patchPlant') ids.add(op.plantId);
+      if (op.type === 'createPlant') ids.add(op.plant.id);
+    }
   };
   gh.pendingOps().filter((e) => !e.parked).forEach((e) => collect(e.op));
   graceOps.forEach((g) => collect(g.op));
@@ -296,8 +306,15 @@ export async function quickLog(plantIds, type = 'watering', { note = null, date 
   const events = plantIds.map((id) => makeEvent(id, type, { note, date }));
   const names = plantIds.map((id) => snapshot.plantsById.get(id)?.name ?? id);
   const label = names.length > 2 ? `${names.length} plants` : names.join(' & ');
-  const verb = type === 'watering' ? 'Watered' : type === 'feeding' ? 'Fed' : 'Logged';
-  stageWithUndo({ type: 'appendEvents', events }, `${verb} ${label}`);
+  const message =
+    type === 'watering'
+      ? `Watered ${label}`
+      : type === 'feeding'
+        ? `Fed ${label}`
+        : type === 'check'
+          ? `Still moist — snoozed ${label}`
+          : `Logged ${label}`;
+  stageWithUndo({ type: 'appendEvents', events }, message);
 }
 
 /** Log any event type from the dialog (explicitly confirmed — no grace). */
