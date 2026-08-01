@@ -2,6 +2,7 @@
 
 import * as store from './store.js';
 import { startRouter } from './router.js';
+import { initTheme, currentTheme, toggleTheme } from './theme.js';
 import { isGardener, onSettingsChange } from './settings.js';
 import { el, icon, clear, snackbar } from './ui.js';
 import { mountSyncStatus } from './components/sync-status.js';
@@ -10,9 +11,10 @@ import * as care from './views/care.js';
 import * as plant from './views/plant.js';
 import * as plantForm from './views/plant-form.js';
 import * as settingsView from './views/settings-view.js';
-import * as wishlist from './views/wishlist.js';
+import * as encyclopedia from './views/encyclopedia.js';
 import * as calendar from './views/calendar.js';
 import * as houseMap from './views/map.js';
+import * as health from './views/health.js';
 
 const VIEWS = {
   today,
@@ -21,9 +23,10 @@ const VIEWS = {
   'plant-edit': plantForm,
   add: plantForm,
   settings: settingsView,
-  wishlist,
+  encyclopedia,
   calendar,
   map: houseMap,
+  health,
 };
 
 // Form views manage their own inputs; re-rendering them on every store
@@ -42,9 +45,26 @@ let renderedPhase = null;
 
 function renderHeaderNav() {
   clear(headerNavEl);
+  // Theme toggle first: one tap flips light/dark (stored as an explicit
+  // choice; Settings' "Auto" hands control back to the system).
+  const dark = currentTheme() === 'dark';
+  headerNavEl.appendChild(
+    el(
+      'button',
+      {
+        class: 'header-nav__link',
+        type: 'button',
+        'aria-label': dark ? 'Switch to the light theme' : 'Switch to the dark theme',
+        title: dark ? 'Light theme' : 'Dark theme',
+        onclick: toggleTheme,
+      },
+      icon(dark ? 'sun' : 'moon'),
+    ),
+  );
   const entries = [
     { href: '#/calendar', label: 'Calendar', iconName: 'calendar', active: route.name === 'calendar' },
     { href: '#/map', label: 'House map', iconName: 'mapIcon', active: route.name === 'map' },
+    { href: '#/health', label: 'Plant health', iconName: 'bug', active: route.name === 'health' },
   ];
   for (const entry of entries) {
     headerNavEl.appendChild(
@@ -69,7 +89,7 @@ function renderTabBar() {
   const tabs = [
     { href: '#/', label: 'Today', iconName: 'leaf', active: route.name === 'today' },
     { href: '#/care', label: 'Care', iconName: 'table', active: route.name === 'care' },
-    { href: '#/wishlist', label: 'Wishlist', iconName: 'star', active: route.name === 'wishlist' },
+    { href: '#/encyclopedia', label: 'Plants', iconName: 'book', active: route.name === 'encyclopedia' },
   ];
   if (isGardener()) {
     tabs.push({ href: '#/add', label: 'Add', iconName: 'plus', active: route.name === 'add' });
@@ -173,16 +193,51 @@ function renderView() {
     return;
   }
 
+  // A store-driven re-render can land mid-word in a filter/search box (e.g.
+  // a background flush finishing). Remember which labelled control held
+  // focus and restore it (with the cursor) after the rebuild.
+  const focused = document.activeElement;
+  const restore =
+    focused &&
+    viewEl.contains(focused) &&
+    ['INPUT', 'SELECT', 'TEXTAREA'].includes(focused.tagName) &&
+    focused.getAttribute('aria-label')
+      ? {
+          label: focused.getAttribute('aria-label'),
+          start: focused.selectionStart,
+          end: focused.selectionEnd,
+        }
+      : null;
+
   clear(viewEl);
   viewEl.className = `view${route.name === 'care' ? ' view--wide' : ''}`;
   if (state.issues.length && !dismissedIssues && route.name !== 'settings') {
     renderIssuesBanner(viewEl, state.issues);
   }
   (VIEWS[route.name] ?? today).render(viewEl, route.params, route.name);
+
+  if (restore) {
+    const again = viewEl.querySelector(
+      `input[aria-label="${CSS.escape(restore.label)}"], select[aria-label="${CSS.escape(restore.label)}"], textarea[aria-label="${CSS.escape(restore.label)}"]`,
+    );
+    if (again) {
+      again.focus({ preventScroll: true });
+      if (restore.start != null && typeof again.setSelectionRange === 'function') {
+        try {
+          again.setSelectionRange(restore.start, restore.end ?? restore.start);
+        } catch {
+          /* selection is not supported on every input type */
+        }
+      }
+      return; // keep the user's caret — skip the container focus below
+    }
+  }
   viewEl.focus({ preventScroll: true });
 }
 
 /* ---------------- boot ---------------- */
+
+initTheme();
 
 startRouter((next) => {
   route = next;
@@ -198,6 +253,12 @@ store.subscribe(() => {
   renderView();
 });
 onSettingsChange(() => renderTabBar());
+// In Auto mode an OS scheme flip restyles the page via js/theme.js — the
+// header's sun/moon toggle must follow, or its label promises the opposite
+// of what a tap would do.
+window
+  .matchMedia('(prefers-color-scheme: dark)')
+  .addEventListener('change', () => renderTabBar());
 
 mountSyncStatus(document.getElementById('sync-status'));
 store.load();

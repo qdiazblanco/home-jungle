@@ -4,6 +4,8 @@
 // gardener mode.
 
 import * as store from '../store.js';
+import * as gh from '../github.js';
+import { compressPhoto } from '../photos.js';
 import { isGardener } from '../settings.js';
 import {
   el,
@@ -15,12 +17,14 @@ import {
   confirmDialog,
   showSheet,
   formField,
+  snackbar,
 } from '../ui.js';
 import { effectiveCare } from '../../shared/effective-care.js';
 import { wateringStatus, lastEventOfType } from '../../shared/schedule.js';
 import { renderMarkdown } from '../../shared/markdown.js';
 import { dayOf, todayString } from '../../shared/dates.js';
 import { plantPhoto, stateChip } from '../components/plant-row.js';
+import { photoImg, rememberFreshPhoto } from '../components/photo-img.js';
 import { ensureAuthor, KNOWN_GARDENERS } from '../components/author-gate.js';
 import { repotPlan } from '../../shared/pot.js';
 import { uniquePlantId } from '../slug.js';
@@ -31,6 +35,7 @@ import { FURNITURE_KINDS } from './map.js';
 
 const EVENT_ICONS = {
   watering: 'water',
+  check: 'check',
   feeding: 'feeding',
   repotting: 'repotting',
   pruning: 'pruning',
@@ -97,9 +102,10 @@ function drawContent(root, id, draw) {
 
   const today = store.today();
   const season = store.currentSeason();
-  const status = wateringStatus(plant, events, today, season);
+  const status = wateringStatus(plant, events, today, season, { mode: store.scheduleMode() });
   const care = effectiveCare(plant);
-  const pending = store.pendingPlantIds();
+  const pending = store.pendingPlantIds('watering');
+  const pendingCheck = store.pendingPlantIds('check');
 
   /* ---------- header ---------- */
 
@@ -212,6 +218,18 @@ function drawContent(root, id, draw) {
           icon('water'),
           pending.has(plant.id) ? 'Watered ✓' : 'Water now',
         ),
+        status && ['due', 'overdue'].includes(status.state)
+          ? el(
+              'button',
+              {
+                class: 'btn',
+                disabled: pendingCheck.has(plant.id),
+                onclick: () => store.quickLog([plant.id], 'check'),
+              },
+              icon('check'),
+              pendingCheck.has(plant.id) ? 'Checked ✓' : 'Still moist',
+            )
+          : null,
         el(
           'button',
           { class: 'btn', onclick: () => openEventDialog(plant, { type: 'note' }) },
@@ -251,6 +269,60 @@ function drawContent(root, id, draw) {
         ),
       ),
     );
+  }
+
+  /* ---------- photos ---------- */
+
+  const photoEvents = events
+    .filter((e) => e.plantId === plant.id && e.type === 'photo' && typeof e.src === 'string')
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+
+  if (photoEvents.length || canEdit) {
+    root.appendChild(
+      el(
+        'div',
+        { class: 'section-title' },
+        el('h2', {}, 'Photos'),
+        canEdit
+          ? el(
+              'button',
+              { class: 'btn btn--sm', onclick: () => startPhotoCapture(plant, draw) },
+              icon('photo'),
+              'Add photo',
+            )
+          : null,
+      ),
+    );
+    const photoCard = el('div', { class: 'card' });
+    if (photoEvents.length) {
+      photoCard.appendChild(
+        el(
+          'div',
+          { class: 'photo-grid' },
+          photoEvents.map((event) =>
+            el(
+              'button',
+              {
+                type: 'button',
+                'aria-label': `Open photo from ${fmtDay(dayOf(event.date))}`,
+                onclick: () => openPhotoViewer(plant, event, canEdit, draw),
+              },
+              photoImg(event, {
+                loading: 'lazy',
+                alt: [fmtDay(dayOf(event.date), { withYear: 'always' }), event.note]
+                  .filter(Boolean)
+                  .join(' — '),
+              }),
+            ),
+          ),
+        ),
+      );
+    } else {
+      photoCard.appendChild(
+        el('p', { class: 'muted small' }, 'No photos yet — the first one starts the album.'),
+      );
+    }
+    root.appendChild(photoCard);
   }
 
   /* ---------- care profile: reference vs observed ---------- */
@@ -905,6 +977,150 @@ function openMixSheet(plant, care, draw) {
       'What the pot actually holds right now. The ideal recipe (edited in the plant form) stays untouched and drives the repot calculator whenever it exists.'),
     rowsWrap,
     actions,
+  );
+}
+
+/* ---------- photos: capture, commit, view ---------- */
+// The album <img> + deploy-gap object-URL bridge live in
+// components/photo-img.js, shared with the gallery view.
+
+/** Next collision-free repo path for a photo of this plant today. */
+function photoPath(plant, ext, bump = 0) {
+  const day = todayString();
+  const prefix = `img/plants/${plant.id}/${day}-`;
+  const { events } = store.getSnapshot(); // includes queued + in-grace events
+  const taken = events.filter(
+    (e) => e.plantId === plant.id && e.type === 'photo' && e.src?.startsWith(prefix),
+  ).length;
+  return `${prefix}${taken + 1 + bump}.${ext}`;
+}
+
+/** Photos never touch the ops queue: PUT the image, then log the event. */
+function startPhotoCapture(plant, draw) {
+  if (!navigator.onLine) {
+    snackbar({ message: 'Photos need a connection — try again when back online.' });
+    return;
+  }
+  const input = el('input', {
+    type: 'file',
+    accept: 'image/*',
+    capture: 'environment',
+    style: 'display:none',
+    onchange: () => {
+      const file = input.files?.[0];
+      input.remove();
+      if (file) openPhotoCommitSheet(plant, file, draw);
+    },
+  });
+  // iOS needs the input in the document before click() opens the picker.
+  document.body.appendChild(input);
+  input.click();
+}
+
+async function openPhotoCommitSheet(plant, file, draw) {
+  if (!(await ensureAuthor())) return;
+  const { close, body } = showSheet({ title: `New photo — ${plant.name}` });
+
+  const previewUrl = URL.createObjectURL(file);
+  const noteInput = el('input', { type: 'text', placeholder: 'Optional note (new leaf, repot day…)' });
+  const commitBtn = el('button', { class: 'btn btn--primary' }, 'Commit photo');
+
+  commitBtn.addEventListener('click', async () => {
+    commitBtn.disabled = true;
+    commitBtn.textContent = 'Committing…';
+    try {
+      const { bytes, ext, oversized } = await compressPhoto(file);
+      if (oversized) {
+        snackbar({ message: 'Big photo — committed anyway, but it will weigh on the repo.' });
+      }
+      let path = photoPath(plant, ext);
+      for (let bump = 1; ; bump++) {
+        try {
+          // ...IfAbsent: a retry after a lost PUT response recognizes the
+          // already-landed file by content instead of duplicating it.
+          await gh.putBinaryFileIfAbsent(path, bytes, `photo: ${plant.name}`);
+          break;
+        } catch (err) {
+          // Path already exists with DIFFERENT bytes (same-day upload from
+          // the other phone): pick the next filename. Anything else fails.
+          if (err.kind === 'conflict' && bump <= 5) {
+            path = photoPath(plant, ext, bump);
+            continue;
+          }
+          throw err;
+        }
+      }
+      store.logEvent(plant.id, 'photo', { note: noteInput.value.trim() || null, src: path });
+      // Pages serves the file only after the deploy finishes (~1 min); keep
+      // the just-committed bytes renderable locally until then.
+      rememberFreshPhoto(
+        path,
+        URL.createObjectURL(new Blob([bytes], { type: ext === 'webp' ? 'image/webp' : 'image/jpeg' })),
+      );
+      URL.revokeObjectURL(previewUrl);
+      close();
+      snackbar({ message: 'Photo committed 🌿' });
+      draw();
+    } catch (err) {
+      commitBtn.disabled = false;
+      commitBtn.textContent = 'Commit photo';
+      snackbar({
+        message:
+          err.kind === 'auth'
+            ? 'The token was rejected — fix it in Settings, then try again.'
+            : `Could not upload the photo: ${err.message}`,
+      });
+    }
+  });
+
+  body.append(
+    el('div', { class: 'photo-preview' }, el('img', { src: previewUrl, alt: 'Photo preview' })),
+    el('p', { class: 'small muted' },
+      'Compressed on this device, committed straight to the repo, and logged as a photo event.'),
+    formField('Note', noteInput),
+    el(
+      'div',
+      { class: 'sheet__actions' },
+      el('button', {
+        class: 'btn',
+        onclick: () => {
+          URL.revokeObjectURL(previewUrl);
+          close();
+        },
+      }, 'Cancel'),
+      commitBtn,
+    ),
+  );
+}
+
+function openPhotoViewer(plant, event, canEdit, draw) {
+  const { close, body } = showSheet({ title: fmtDay(dayOf(event.date), { withYear: 'always' }) });
+  const isCover = plant.photo === event.src;
+  // Native append stringifies null (and arrays) — '' is the safe no-op child.
+  body.append(
+    el('div', { class: 'photo-view' }, photoImg(event, { alt: event.note ?? plant.name })),
+    event.note ? el('p', { class: 'small' }, event.note) : '',
+    el('p', { class: 'small muted' }, `${fmtDateTime(event.date)} — ${event.author ?? '?'}`),
+    canEdit
+      ? el(
+          'div',
+          { class: 'sheet__actions' },
+          el(
+            'button',
+            {
+              class: 'btn',
+              disabled: isCover,
+              onclick: () => {
+                store.patchPlant(plant.id, { photo: event.src });
+                close();
+                snackbar({ message: `${plant.name} has a new cover photo.` });
+                draw();
+              },
+            },
+            isCover ? 'Current cover ✓' : 'Set as cover',
+          ),
+        )
+      : '',
   );
 }
 

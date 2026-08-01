@@ -82,6 +82,10 @@ const ICONS = {
   sun: stroke(
     '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   ),
+  moon: stroke('<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>'),
+  bug: stroke(
+    '<ellipse cx="12" cy="14" rx="5" ry="6"/><path d="M12 8V5m0 3c-2 0-3-1.5-3-3m3 3c2 0 3-1.5 3-3M7 12H4m3 5H4.5M17 12h3m-3 5h2.5M12 10v10"/>',
+  ),
   spinner: stroke('<path d="M12 3a9 9 0 1 0 9 9"/>'),
   cloudOff: stroke('<path d="M4 15a4.5 4.5 0 0 1 3.2-7.7A6 6 0 0 1 18.5 9 4 4 0 0 1 18 17H7"/><path d="M3 3l18 18"/>'),
   leaf: stroke('<path d="M6 21c0-9 4-14 13-16-1 9-5 14-13 16z"/><path d="M6 21c3-6 6-9 10-12"/>'),
@@ -98,6 +102,7 @@ const ICONS = {
   close: stroke('<path d="M6 6l12 12M18 6 6 18"/>'),
   external: stroke('<path d="M14 4h6v6m0-6L10 14"/><path d="M20 14v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/>'),
   star: stroke('<path d="M12 3l2.7 5.8 6.3.7-4.7 4.3 1.3 6.2L12 16.9 6.4 20l1.3-6.2L3 9.5l6.3-.7L12 3z"/>'),
+  book: stroke('<path d="M12 6c-2-1.5-5-2-9-2v14c4 0 7 .5 9 2 2-1.5 5-2 9-2V4c-4 0-7 .5-9 2z"/><path d="M12 6v14"/>'),
   mapIcon: stroke('<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14m6-12v14"/>'),
 };
 

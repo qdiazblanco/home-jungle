@@ -13,6 +13,7 @@ import { dayOf } from './dates.js';
 export const PLANT_STATUSES = ['active', 'gifted', 'deceased', 'wishlist'];
 export const EVENT_TYPES = [
   'watering',
+  'check', // "still moist" — snoozes the schedule without logging a watering
   'feeding',
   'repotting',
   'pruning',
@@ -23,7 +24,18 @@ export const EVENT_TYPES = [
   'photo',
 ];
 export const SUN_NEEDS = ['low', 'medium', 'high'];
-export const PLANT_ICONS = ['pot', 'bushy', 'tree', 'cactus', 'hanging'];
+export const PLANT_ICONS = [
+  'pot',
+  'bushy',
+  'tree',
+  'cactus',
+  'hanging',
+  'succulent',
+  'aroid',
+  'fern',
+  'palm',
+  'snake',
+];
 
 /** Canonical care parameters — observed values for these are legitimate even
  * when the reference layer has no matching entry (the quick-edit sheet can
@@ -225,6 +237,24 @@ export function validateData(plants, events, opts = {}) {
 
     if (typeof ev.author !== 'string' || !ev.author) {
       issues.push({ path: `${where}.author`, message: 'Event has no author.' });
+    }
+
+    // Photo events reference their committed image via src. The UI always
+    // sets it for new captures; a missing src (pre-capture-era events) or a
+    // path outside img/plants/ is survivable — the moment stays logged but
+    // nothing renders — so both are issues, never errors.
+    if (ev.type === 'photo') {
+      if (ev.src == null) {
+        issues.push({
+          path: `${where}.src`,
+          message: 'Photo event has no image file (src) — the moment is logged but no photo shows.',
+        });
+      } else if (typeof ev.src !== 'string' || !ev.src.startsWith('img/plants/')) {
+        issues.push({
+          path: `${where}.src`,
+          message: `Photo src "${ev.src}" should be a repo path under img/plants/ (e.g. "img/plants/monstera/2026-07-31-1.jpg").`,
+        });
+      }
     }
   });
 

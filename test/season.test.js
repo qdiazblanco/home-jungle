@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { seasonForMonth, seasonForDay, SUMMER_MONTHS } from '../shared/season.js';
+import { seasonForMonth, seasonForDay, summerWeight, SUMMER_MONTHS } from '../shared/season.js';
 
 describe('seasonForMonth', () => {
   it('maps May–September to summer, the rest to winter', () => {
@@ -25,6 +25,34 @@ describe('seasonForMonth', () => {
 
   it('exposes the summer table for reuse', () => {
     assert.deepEqual(SUMMER_MONTHS, [5, 6, 7, 8, 9]);
+  });
+});
+
+describe('summerWeight (blended schedule mode)', () => {
+  it('anchors January at 0 and July at 1 with symmetric linear ramps', () => {
+    const sixths = (n) => n / 6;
+    const expected = {
+      1: 0,
+      2: sixths(1),
+      3: sixths(2),
+      4: sixths(3),
+      5: sixths(4),
+      6: sixths(5),
+      7: 1,
+      8: sixths(5),
+      9: sixths(4),
+      10: sixths(3),
+      11: sixths(2),
+      12: sixths(1),
+    };
+    for (const [month, weight] of Object.entries(expected)) {
+      assert.equal(summerWeight(Number(month)), weight, `month ${month}`);
+    }
+  });
+
+  it('is symmetric around July (April equals October)', () => {
+    assert.equal(summerWeight(4), summerWeight(10));
+    assert.equal(summerWeight(2), summerWeight(12));
   });
 });
 

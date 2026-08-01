@@ -7,8 +7,12 @@ import { todayString } from '../../shared/dates.js';
 import { el, icon, showSheet, formField } from '../ui.js';
 import { ensureAuthor } from './author-gate.js';
 
+// 'photo' is deliberately absent: photo events must reference a committed
+// image (src), and the profile's "Add photo" capture flow is the only path
+// that creates one. An imageless moment is a note.
 const TYPES = [
   { type: 'watering', label: 'Watering', iconName: 'water' },
+  { type: 'check', label: 'Still moist', iconName: 'check' },
   { type: 'feeding', label: 'Feeding', iconName: 'feeding' },
   { type: 'misting', label: 'Misting', iconName: 'misting' },
   { type: 'repotting', label: 'Repotting', iconName: 'repotting' },
@@ -16,13 +20,13 @@ const TYPES = [
   { type: 'treatment', label: 'Treatment', iconName: 'treatment' },
   { type: 'cutting', label: 'Cutting', iconName: 'cutting' },
   { type: 'note', label: 'Note', iconName: 'note' },
-  { type: 'photo', label: 'Photo', iconName: 'photo' },
 ];
 
 const HINTS = {
+  check: 'Substrate still damp on watering day — snoozes the schedule a couple of days without logging a watering.',
   treatment: 'Pests, fungus, tonics — say what and why in the note.',
   cutting: 'Taking a cutting for propagation? Add the child plant afterwards and set its parent.',
-  photo: 'Photos are added to the repo img/ folder by hand (see README) — this logs the moment.',
+  note: 'For a photo with an actual image, use “Add photo” on the profile instead.',
 };
 
 export async function openEventDialog(plant, { type = 'note', onLogged } = {}) {

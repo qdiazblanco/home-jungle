@@ -28,13 +28,21 @@ function isSafeHref(href) {
 }
 
 function renderInline(escaped) {
-  let out = escaped;
-  out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Code spans are extracted to placeholders FIRST so the bold/italic/link
+  // regexes can never transform text inside them (`a**b**c` stays literal),
+  // then restored last. \x00 cannot appear in escaped text, so the
+  // placeholder is collision-free.
+  const codes = [];
+  let out = escaped.replace(/`([^`]+)`/g, (m, code) => {
+    codes.push(code);
+    return `\x00${codes.length - 1}\x00`;
+  });
   out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
   out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (match, text, href) =>
     isSafeHref(href) ? `<a href="${href}" target="_blank" rel="noopener">${text}</a>` : text,
   );
+  out = out.replace(/\x00(\d+)\x00/g, (m, i) => `<code>${codes[Number(i)]}</code>`);
   return out;
 }
 
@@ -44,7 +52,9 @@ const HEADING_TAGS = { 1: 'h2', 2: 'h3', 3: 'h4' };
 export function renderMarkdown(source) {
   if (typeof source !== 'string' || !source.trim()) return '';
 
-  const blocks = escapeHtml(source.replace(/\r\n/g, '\n')).split(/\n{2,}/);
+  // NULs never appear in real notes; dropping them guarantees the code-span
+  // placeholder in renderInline cannot collide with pasted input.
+  const blocks = escapeHtml(source.replace(/\r\n/g, '\n').replace(/\x00/g, '')).split(/\n{2,}/);
   const html = [];
 
   for (const block of blocks) {

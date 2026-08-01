@@ -23,3 +23,15 @@ export function seasonForDay(day, override = null) {
   if (override === 'summer' || override === 'winter') return override;
   return seasonForMonth(monthOf(day));
 }
+
+/**
+ * Summer weight (0–1) of a month for the optional BLENDED schedule mode:
+ * January anchors at 0 (pure winter interval), July at 1 (pure summer),
+ * with symmetric linear ramps between — Madrid's shoulder seasons are long,
+ * and this is the cheap middle path between binary seasons and weather
+ * integration. Only interval interpolation uses this; season names,
+ * warnings and the calendar stay on seasonForDay.
+ */
+export function summerWeight(month) {
+  return (6 - Math.abs(month - 7)) / 6;
+}

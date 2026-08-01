@@ -35,6 +35,7 @@ describe('canonical serializer', () => {
       rooms: [{ id: 'a', name: 'A', x: 0, y: 0, w: 5, h: 5, floor: 'tiles' }],
       furniture: [{ id: 'f1', roomId: 'a', kind: 'table', x: 1, y: 1, w: 3, h: 2, wood: 'oak' }],
       placements: { 'some-plant': 'f1' },
+      spots: { 'floor-plant': [2.5, 3] },
       architect: 'Pepa',
     };
     const parsed = JSON.parse(gh.serializeFile('data/house.json', house));
@@ -42,14 +43,35 @@ describe('canonical serializer', () => {
     assert.equal(parsed.rooms[0].floor, 'tiles');
     assert.equal(parsed.furniture[0].wood, 'oak');
     assert.equal(parsed.placements['some-plant'], 'f1');
+    assert.deepEqual(parsed.spots['floor-plant'], [2.5, 3]);
     assert.equal(parsed.architect, 'Pepa');
   });
 
-  it('defaults missing furniture/placements to empty containers', () => {
+  it('orders src after note on photo events', () => {
+    const event = {
+      src: 'img/plants/monstera/2026-07-31-1.jpg',
+      note: 'new leaf',
+      author: 'Kike',
+      date: '2026-07-31T10:00:00',
+      type: 'photo',
+      plantId: 'monstera',
+      id: 'ev-photo',
+    };
+    const parsed = JSON.parse(gh.serializeFile('data/events.json', [event]));
+    assert.deepEqual(Object.keys(parsed[0]), ['id', 'plantId', 'type', 'date', 'author', 'note', 'src']);
+  });
+
+  it('encodes raw bytes to base64 (photo uploads)', () => {
+    const bytes = new Uint8Array([0, 1, 254, 255, 104, 105]);
+    assert.equal(gh.encodeBytes(bytes.buffer), Buffer.from(bytes).toString('base64'));
+  });
+
+  it('defaults missing furniture/placements/spots to empty containers', () => {
     const parsed = JSON.parse(
       gh.serializeFile('data/house.json', { grid: { w: 10, h: 10 }, rooms: [] }),
     );
     assert.deepEqual(parsed.furniture, []);
     assert.deepEqual(parsed.placements, {});
+    assert.deepEqual(parsed.spots, {});
   });
 });

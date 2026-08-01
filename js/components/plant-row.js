@@ -7,7 +7,13 @@ import { el, icon, fmtRelativeDay } from '../ui.js';
 
 /* ---------- photo with deterministic placeholder ---------- */
 
-const PLACEHOLDER_TINTS = ['#e1ecdc', '#dfe8d2', '#e7e3cf', '#dbe6df'];
+// Token-routed so the tints follow the theme (see css/tokens.css).
+const PLACEHOLDER_TINTS = [
+  'var(--plant-tint-a)',
+  'var(--plant-tint-b)',
+  'var(--plant-tint-c)',
+  'var(--plant-tint-d)',
+];
 
 function hashCode(text) {
   let hash = 0;
@@ -157,6 +163,7 @@ export function wateringMeta(status) {
   if (!status) return [];
   const meta = [];
   if (status.lastWatering) meta.push(`watered ${fmtRelativeDay(status.lastWatering)}`);
+  if (status.lastCheck) meta.push(`checked ${fmtRelativeDay(status.lastCheck)}`);
   if (status.interval) meta.push(`every ${status.interval} d`);
   return meta;
 }

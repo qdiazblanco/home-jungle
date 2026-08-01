@@ -39,11 +39,15 @@ function drawContent(root, draw) {
   const today = store.today();
   const season = store.currentSeason();
   const canEdit = isGardener();
-  const pending = store.pendingPlantIds();
+  const pendingWater = store.pendingPlantIds('watering');
+  const pendingCheck = store.pendingPlantIds('check');
 
   const active = plants.filter((p) => p.status === 'active');
   const entries = active
-    .map((plant) => ({ plant, status: wateringStatus(plant, events, today, season) }))
+    .map((plant) => ({
+      plant,
+      status: wateringStatus(plant, events, today, season, { mode: store.scheduleMode() }),
+    }))
     .sort(
       (a, b) => compareUrgency(a.status, b.status) || a.plant.name.localeCompare(b.plant.name),
     );
@@ -67,7 +71,10 @@ function drawContent(root, draw) {
   );
 
   /* ---- warnings panel ---- */
-  const panel = warningList(getWarnings({ plants, events, today, season }), plantsById);
+  const panel = warningList(
+    getWarnings({ plants, events, today, season, mode: store.scheduleMode() }),
+    plantsById,
+  );
   if (panel) root.appendChild(panel);
 
   /* ---- this-month teaser (seasonal calendar) ---- */
@@ -145,9 +152,22 @@ function drawContent(root, draw) {
         {
           iconName: 'water',
           label: 'Water',
-          done: pending.has(plant.id),
+          done: pendingWater.has(plant.id),
           onClick: () => store.quickLog([plant.id], 'watering'),
         },
+        // "Still moist": defer without lying to the log. Deliberately absent
+        // from multi-select — batch watering makes sense, batch soil
+        // judgment doesn't.
+        ...(['due', 'overdue'].includes(status.state)
+          ? [
+              {
+                iconName: 'check',
+                label: 'Still moist',
+                done: pendingCheck.has(plant.id),
+                onClick: () => store.quickLog([plant.id], 'check'),
+              },
+            ]
+          : []),
       ],
     });
 

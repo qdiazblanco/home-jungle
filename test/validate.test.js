@@ -101,6 +101,17 @@ describe('validateData — issues (render + banner)', () => {
     assert.equal(validateData([makePlant({ icon: 'hanging' })], []).issues.length, 0);
   });
 
+  it('flags photo events with a missing or out-of-tree src as issues, never errors', () => {
+    const legacy = makeEvent({ type: 'photo' }); // no src — pre-capture era
+    const stray = makeEvent({ type: 'photo', src: 'https://elsewhere.example/x.jpg' });
+    const good = makeEvent({ type: 'photo', src: 'img/plants/test-plant/2026-07-31-1.jpg' });
+    const { errors, issues } = validateData([makePlant()], [legacy, stray, good]);
+    assert.equal(errors.length, 0); // the app must still boot on legacy data
+    assert.match(messagesOf(issues), /no image file/);
+    assert.match(messagesOf(issues), /under img\/plants\//);
+    assert.equal(issues.length, 2); // the well-formed one is clean
+  });
+
   it('flags authorless events and bad acquired dates', () => {
     const plant = makePlant({ acquired: 'spring 2024' });
     const { issues } = validateData([plant], [makeEvent({ author: '' })]);
@@ -112,7 +123,8 @@ describe('validateData — issues (render + banner)', () => {
 describe('exported enums', () => {
   it('match the brief', () => {
     assert.deepEqual(PLANT_STATUSES, ['active', 'gifted', 'deceased', 'wishlist']);
-    assert.equal(EVENT_TYPES.length, 9);
+    assert.equal(EVENT_TYPES.length, 10); // the nine from the brief + 'check'
+    assert.ok(EVENT_TYPES.includes('check'));
     assert.deepEqual(SUN_NEEDS, ['low', 'medium', 'high']);
   });
 });

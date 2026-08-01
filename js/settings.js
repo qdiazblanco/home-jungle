@@ -7,6 +7,8 @@ const DEFAULTS = {
   token: '',
   author: '',
   seasonOverride: 'auto', // 'auto' | 'summer' | 'winter'
+  seasonMode: 'binary', // 'binary' | 'blended' (monthly interval interpolation)
+  theme: 'auto', // 'auto' | 'light' | 'dark' (js/theme.js applies it)
   owner: '',
   repo: '',
   branch: '',

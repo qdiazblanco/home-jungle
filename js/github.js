@@ -35,7 +35,7 @@ const CARE_PARAM_ORDER = [
   'humidity', 'feeding', 'feeding_summer', 'feeding_winter', 'substrate_recipe',
   'toxic_to_pets',
 ];
-const EVENT_KEY_ORDER = ['id', 'plantId', 'type', 'date', 'author', 'note'];
+const EVENT_KEY_ORDER = ['id', 'plantId', 'type', 'date', 'author', 'note', 'src'];
 const ROOM_KEY_ORDER = ['id', 'name', 'x', 'y', 'w', 'h'];
 const FURNITURE_KEY_ORDER = ['id', 'roomId', 'kind', 'x', 'y', 'w', 'h'];
 
@@ -84,7 +84,7 @@ export function serializeFile(path, data) {
     canonical = data.map(canonicalPlant);
   } else if (path === HOUSE_PATH) {
     // Preserve unknown keys (hand-edits) like the other serializers do.
-    canonical = orderKeys(data ?? {}, ['grid', 'rooms', 'furniture', 'placements']);
+    canonical = orderKeys(data ?? {}, ['grid', 'rooms', 'furniture', 'placements', 'spots']);
     canonical.grid = orderKeys({ w: 24, h: 16, ...(data?.grid ?? {}) }, ['w', 'h']);
     canonical.rooms = (data?.rooms ?? []).map((room) => orderKeys(room, ROOM_KEY_ORDER));
     canonical.furniture = (Array.isArray(data?.furniture) ? data.furniture : [])
@@ -92,6 +92,11 @@ export function serializeFile(path, data) {
       .map((piece) => orderKeys(piece, FURNITURE_KEY_ORDER));
     canonical.placements = orderKeys(
       data?.placements && typeof data.placements === 'object' ? data.placements : {},
+      [],
+    );
+    // spots: plantId -> [x, y] floor position, relative to the plant's room.
+    canonical.spots = orderKeys(
+      data?.spots && typeof data.spots === 'object' ? data.spots : {},
       [],
     );
   } else {
@@ -116,6 +121,17 @@ export function decodeContent(base64) {
   const binary = atob(base64.replace(/\s/g, ''));
   const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
   return new TextDecoder('utf-8').decode(bytes);
+}
+
+/** Base64 for raw bytes (photo uploads) — chunked like encodeContent. */
+export function encodeBytes(buffer) {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
 }
 
 /* ================= API client & error taxonomy ================= */
@@ -214,13 +230,17 @@ export async function getFile(path) {
   throw new ApiError('validation', `Unexpected contents response for ${path}.`);
 }
 
+function commitAuthor() {
+  const { author } = getSettings();
+  return author
+    ? { name: author, email: `${author.toLowerCase().replace(/[^a-z0-9]+/g, '-')}@home-jungle.local` }
+    : undefined;
+}
+
 /** PUT a data file; returns the new content sha from the response. */
 export async function putFile(path, text, sha, message) {
   const { owner, repo, branch } = coordsOrThrow();
-  const { author } = getSettings();
-  const gitAuthor = author
-    ? { name: author, email: `${author.toLowerCase().replace(/[^a-z0-9]+/g, '-')}@home-jungle.local` }
-    : undefined;
+  const gitAuthor = commitAuthor();
   const res = await apiFetch(`/repos/${owner}/${repo}/contents/${path}`, {
     method: 'PUT',
     body: {
@@ -233,6 +253,72 @@ export async function putFile(path, text, sha, message) {
   });
   const json = await res.json();
   return { sha: json.content?.sha };
+}
+
+/**
+ * Create-only binary PUT for photo files. No sha handling on purpose:
+ * photos are append-only under unique paths, so an existing file surfaces
+ * as a conflict error and the caller picks the next filename. Never queued —
+ * the ops queue stays JSON-only.
+ */
+export async function putBinaryFile(path, buffer, message) {
+  const { owner, repo, branch } = coordsOrThrow();
+  const gitAuthor = commitAuthor();
+  const res = await apiFetch(`/repos/${owner}/${repo}/contents/${path}`, {
+    method: 'PUT',
+    body: {
+      message,
+      content: encodeBytes(buffer),
+      branch,
+      ...(gitAuthor ? { author: gitAuthor } : {}),
+    },
+  });
+  const json = await res.json();
+  return { sha: json.content?.sha };
+}
+
+/** Git blob sha ("blob <len>\0" + bytes, SHA-1) of raw bytes. */
+async function gitBlobSha(buffer) {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  const header = new TextEncoder().encode(`blob ${bytes.length}\0`);
+  const all = new Uint8Array(header.length + bytes.length);
+  all.set(header);
+  all.set(bytes, header.length);
+  const digest = await crypto.subtle.digest('SHA-1', all);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Contents-API sha of a path, or null when it does not exist. */
+async function getFileSha(path) {
+  const { owner, repo, branch } = coordsOrThrow();
+  try {
+    const res = await apiFetch(
+      `/repos/${owner}/${repo}/contents/${path}?ref=${encodeURIComponent(branch)}`,
+    );
+    return (await res.json()).sha ?? null;
+  } catch (err) {
+    if (err.kind === 'not-found') return null;
+    throw err;
+  }
+}
+
+/**
+ * putBinaryFile that resolves the lost-response case (the photo analogue of
+ * the data files' idempotent replay): on a conflict, if the existing file
+ * already holds these exact bytes the earlier PUT landed and this is a
+ * retry — report success instead of letting the caller duplicate the blob
+ * under a bumped filename. Returns { existed } so callers can tell.
+ */
+export async function putBinaryFileIfAbsent(path, buffer, message) {
+  try {
+    await putBinaryFile(path, buffer, message);
+    return { existed: false };
+  } catch (err) {
+    if (err.kind !== 'conflict') throw err;
+    const remoteSha = await getFileSha(path);
+    if (remoteSha && remoteSha === (await gitBlobSha(buffer))) return { existed: true };
+    throw err; // genuinely different file (the other phone) — caller bumps
+  }
 }
 
 /**
@@ -592,6 +678,7 @@ function handleFlushError(err) {
 
 const TYPE_VERBS = {
   watering: 'water',
+  check: 'still moist',
   feeding: 'feed',
   misting: 'mist',
   pruning: 'prune',

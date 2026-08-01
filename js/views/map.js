@@ -13,7 +13,26 @@ import { isGardener } from '../settings.js';
 import { el, icon, clear, snackbar, fmtRelativeDay } from '../ui.js';
 import { wateringStatus } from '../../shared/schedule.js';
 import { plantPhoto, stateChip } from '../components/plant-row.js';
-import { render3D, dollhouseRooms } from './map3d.js';
+
+// The dollhouse (~400 lines of pure presentation) loads on first switch to
+// the 3D view instead of riding every visitor's critical path. It stays in
+// the SW SHELL, so the dynamic import is served from the versioned cache and
+// still works offline.
+let map3d = null; // loaded module, or null until first use
+let map3dLoading = null; // in-flight import promise
+
+function loadMap3d() {
+  map3dLoading ??= import('./map3d.js')
+    .then((mod) => {
+      map3d = mod;
+      return mod;
+    })
+    .catch((err) => {
+      map3dLoading = null; // allow a retry on the next toggle
+      throw err;
+    });
+  return map3dLoading;
+}
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -39,12 +58,15 @@ const roomKey = (name) => String(name ?? '').trim().toLowerCase();
 
 const MIN_ROOM = 3;
 
-/** Furniture catalogue: fixed footprints, top height in grid units. */
+/** Furniture catalogue: fixed footprints, top height in grid units.
+ * `screen: true` grows a dark panel on the dollhouse top (TV). */
 export const FURNITURE_KINDS = {
   table: { label: 'Table', w: 3, h: 2, z: 1.0 },
   shelf: { label: 'Shelf', w: 3, h: 1, z: 1.9 },
+  bookshelf: { label: 'Bookshelf', w: 2.4, h: 0.9, z: 2.2 },
   stand: { label: 'Plant stand', w: 1.2, h: 1.2, z: 0.75 },
   windowsill: { label: 'Windowsill', w: 2.4, h: 0.7, z: 0.95 },
+  tv: { label: 'TV stand', w: 3, h: 0.8, z: 0.9, screen: true },
 };
 
 /**
@@ -91,11 +113,11 @@ function furnitureModel(layout, byRoom) {
 
 /** Plant silhouette markup for a 24×30 viewBox, foliage tinted by urgency. */
 export function iconMarkup(state, iconKind) {
-  const leaf = (extra) => `class="bp-dot--${state}" stroke="rgba(43,51,42,0.25)" stroke-width="0.6" ${extra}`;
+  const leaf = (extra) => `class="bp-dot--${state}" stroke="rgba(var(--ink-rgb), 0.25)" stroke-width="0.6" ${extra}`;
   const potBase =
-    `<ellipse cx="12" cy="27.4" rx="7" ry="1.8" fill="rgba(43,51,42,0.2)"/>` +
+    `<ellipse cx="12" cy="27.4" rx="7" ry="1.8" fill="rgba(var(--shadow-rgb), 0.2)"/>` +
     `<path d="M6.5 16.5 L17.5 16.5 L15.8 24 L8.2 24 Z" fill="var(--terracotta)"/>` +
-    `<rect x="5.4" y="15" width="13.2" height="2.4" rx="0.8" fill="#b5654a"/>`;
+    `<rect x="5.4" y="15" width="13.2" height="2.4" rx="0.8" fill="var(--pot-rim)"/>`;
   switch (iconKind) {
     case 'bushy':
       return (
@@ -109,7 +131,7 @@ export function iconMarkup(state, iconKind) {
     case 'tree':
       return (
         potBase +
-        `<rect x="11" y="8" width="2" height="8" rx="1" fill="#7a5a3a"/>` +
+        `<rect x="11" y="8" width="2" height="8" rx="1" fill="var(--wood-3)"/>` +
         `<circle ${leaf('cx="12" cy="6.4" r="5.6"')}/>`
       );
     case 'cactus':
@@ -121,9 +143,9 @@ export function iconMarkup(state, iconKind) {
       );
     case 'hanging':
       return (
-        `<ellipse cx="12" cy="27.4" rx="7" ry="1.8" fill="rgba(43,51,42,0.2)"/>` +
+        `<ellipse cx="12" cy="27.4" rx="7" ry="1.8" fill="rgba(var(--shadow-rgb), 0.2)"/>` +
         `<path d="M7 8.5 L17 8.5 L15.6 14.5 L8.4 14.5 Z" fill="var(--terracotta)"/>` +
-        `<rect x="6" y="7.2" width="12" height="2.2" rx="0.8" fill="#b5654a"/>` +
+        `<rect x="6" y="7.2" width="12" height="2.2" rx="0.8" fill="var(--pot-rim)"/>` +
         `<path d="M8 14.5 C7 19 7.5 23 6.5 26" fill="none" stroke="var(--leaf-deep)" stroke-width="0.9"/>` +
         `<path d="M12 14.5 C12 20 11.5 24 12.5 27" fill="none" stroke="var(--leaf-deep)" stroke-width="0.9"/>` +
         `<path d="M16 14.5 C17 19 16.5 23 17.5 25" fill="none" stroke="var(--leaf-deep)" stroke-width="0.9"/>` +
@@ -134,6 +156,56 @@ export function iconMarkup(state, iconKind) {
         `<circle ${leaf('cx="17.2" cy="23" r="1.7"')}/>` +
         `<circle ${leaf('cx="10" cy="6.2" r="2.4"')}/>` +
         `<circle ${leaf('cx="14" cy="6.2" r="2.4"')}/>`
+      );
+    case 'succulent':
+      // rosette: a ring of pointed leaves around a fat center
+      return (
+        potBase +
+        `<ellipse ${leaf('cx="12" cy="8" rx="1.9" ry="4.6"')}/>` +
+        `<ellipse ${leaf('cx="12" cy="10.5" rx="1.9" ry="4.6" transform="rotate(52 12 12.5)"')}/>` +
+        `<ellipse ${leaf('cx="12" cy="10.5" rx="1.9" ry="4.6" transform="rotate(-52 12 12.5)"')}/>` +
+        `<ellipse ${leaf('cx="12" cy="11.5" rx="1.9" ry="4.2" transform="rotate(100 12 13)"')}/>` +
+        `<ellipse ${leaf('cx="12" cy="11.5" rx="1.9" ry="4.2" transform="rotate(-100 12 13)"')}/>` +
+        `<circle ${leaf('cx="12" cy="12.2" r="2.6"')}/>`
+      );
+    case 'aroid':
+      // one big heart leaf with split lobes (the monstera silhouette)
+      return (
+        potBase +
+        `<path d="M12 15.5 C11.5 12 10.5 10 9.5 8.5" fill="none" stroke="var(--leaf-deep)" stroke-width="0.9"/>` +
+        `<path ${leaf('d="M9.5 9.5 C4.5 8.5 3.5 4.5 6.5 3 C8 2.2 9.5 2.6 10.5 3.5 C11.5 2 13.5 1.5 15 2.5 C17.5 4 16.5 8.5 11.5 10 C10.8 10.2 10.1 10 9.5 9.5z"')}/>` +
+        `<path d="M7 6.5 L10 5 M9 8.2 L12 6.5 M13.5 8 L15.5 5.5" fill="none" stroke="rgba(var(--ink-rgb), 0.35)" stroke-width="0.5"/>`
+      );
+    case 'fern':
+      // arching fronds fanning out of the pot
+      return (
+        potBase +
+        `<ellipse ${leaf('cx="12" cy="9" rx="1.3" ry="5.6"')}/>` +
+        `<ellipse ${leaf('cx="12" cy="10" rx="1.3" ry="5.4" transform="rotate(35 12 14)"')}/>` +
+        `<ellipse ${leaf('cx="12" cy="10" rx="1.3" ry="5.4" transform="rotate(-35 12 14)"')}/>` +
+        `<ellipse ${leaf('cx="12" cy="11" rx="1.2" ry="4.8" transform="rotate(65 12 14.5)"')}/>` +
+        `<ellipse ${leaf('cx="12" cy="11" rx="1.2" ry="4.8" transform="rotate(-65 12 14.5)"')}/>`
+      );
+    case 'palm':
+      // slim trunk, long fronds arching from the crown
+      return (
+        potBase +
+        `<path d="M12 15.5 C12 12 11.8 9.5 12 7.5" fill="none" stroke="var(--wood-3)" stroke-width="1.2"/>` +
+        `<ellipse ${leaf('cx="12" cy="5" rx="1.1" ry="4.2"')}/>` +
+        `<ellipse ${leaf('cx="12" cy="6" rx="1.1" ry="4.6" transform="rotate(55 12 8)"')}/>` +
+        `<ellipse ${leaf('cx="12" cy="6" rx="1.1" ry="4.6" transform="rotate(-55 12 8)"')}/>` +
+        `<ellipse ${leaf('cx="12" cy="6.5" rx="1" ry="4.2" transform="rotate(88 12 8.5)"')}/>` +
+        `<ellipse ${leaf('cx="12" cy="6.5" rx="1" ry="4.2" transform="rotate(-88 12 8.5)"')}/>`
+      );
+    case 'snake':
+      // upright sword leaves (sansevieria)
+      return (
+        potBase +
+        `<path ${leaf('d="M11 16 C10.6 11 10.8 7 12 3.5 C13.2 7 13.4 11 13 16z"')}/>` +
+        `<path ${leaf('d="M8.2 16 C7.6 12 7.8 9 9 6 C10.2 9 10.2 12.5 9.8 16z"')}/>` +
+        `<path ${leaf('d="M14.2 16 C13.8 12.5 13.8 9 15 6 C16.2 9 16.4 12 15.8 16z"')}/>` +
+        `<path ${leaf('d="M6 16 C5.6 13.5 5.8 11.5 6.8 9.5 C7.8 11.5 7.8 14 7.4 16z"')}/>` +
+        `<path ${leaf('d="M16.6 16 C16.2 14 16.2 11.5 17.2 9.5 C18.2 11.5 18.4 13.5 18 16z"')}/>`
       );
     default: // 'pot'
       return (
@@ -278,24 +350,47 @@ function drawContent(root, draw) {
   );
 
   /* ---- the blueprint / dollhouse ---- */
-  const statusOf = (plant) => wateringStatus(plant, events, today, season);
+  const statusOf = (plant) =>
+    wateringStatus(plant, events, today, season, { mode: store.scheduleMode() });
   const boardCard = el('div', { class: 'card bp-card' });
   tipContainer = boardCard;
 
+  const spots = layout?.spots && typeof layout.spots === 'object' ? layout.spots : {};
   if (viewMode === '3d' && !editor) {
-    render3D(boardCard, {
-      gridW,
-      gridH,
-      rooms: dollhouseRooms(rooms, byRoom, toneFor),
-      model,
-      statusOf,
-      plantSprite: (plant, status) => makeSprite(plant, status),
-      onYaw: (yaw) => {
-        if (compassNeedle) compassNeedle.style.transform = `rotate(${yaw}deg)`;
-      },
-    });
+    if (map3d) {
+      map3d.render3D(boardCard, {
+        gridW,
+        gridH,
+        rooms: map3d.dollhouseRooms(rooms, byRoom, toneFor),
+        model,
+        spots,
+        statusOf,
+        plantSprite: (plant, status) => makeSprite(plant, status),
+        onYaw: (yaw) => {
+          if (compassNeedle) compassNeedle.style.transform = `rotate(${yaw}deg)`;
+        },
+      });
+    } else {
+      boardCard.appendChild(
+        el('div', { class: 'boot-message' }, el('p', {}, 'Building the dollhouse…')),
+      );
+      loadMap3d().then(
+        () => {
+          // Only repaint if the user is still looking at the 3D map.
+          if (viewMode === '3d' && !editor && document.contains(boardCard)) currentDraw?.();
+        },
+        () => {
+          // Same liveness guard as the success path: a rejection landing
+          // after navigation must not snackbar over another view, flip the
+          // saved preference, or repaint a detached tree.
+          if (!(viewMode === '3d' && !editor && document.contains(boardCard))) return;
+          snackbar({ message: 'Could not load the 3D view — showing the plan instead.' });
+          setMode('plan');
+        },
+      );
+    }
   } else {
-    boardCard.appendChild(renderBlueprint({ gridW, gridH, rooms, model, statusOf }));
+    boardCard.appendChild(renderBlueprint({ gridW, gridH, rooms, model, statusOf, spots }));
   }
 
   // Compass as an HTML overlay: never clipped, and it turns with the house.
@@ -387,7 +482,7 @@ function toneFor(id) {
   return FLOOR_TONES[Math.abs(hash) % FLOOR_TONES.length];
 }
 
-function renderBlueprint({ gridW, gridH, rooms, model, statusOf }) {
+function renderBlueprint({ gridW, gridH, rooms, model, statusOf, spots }) {
   const board = svg('svg', {
     class: `bp${editor ? ' bp--editing' : ''}`,
     viewBox: `-0.5 -0.5 ${gridW + 1} ${gridH + 1}`,
@@ -426,7 +521,7 @@ function renderBlueprint({ gridW, gridH, rooms, model, statusOf }) {
   // stroke must not paint over an earlier room's window on a shared wall.
   const windowLayer = svg('g', { class: 'bp-windows' });
   for (const room of rooms) {
-    board.appendChild(renderRoom(board, room, { gridW, gridH, model, statusOf, windowLayer }));
+    board.appendChild(renderRoom(board, room, { gridW, gridH, model, statusOf, windowLayer, spots }));
   }
   board.appendChild(windowLayer);
 
@@ -461,7 +556,7 @@ function windowSegment(room, orientation) {
   return { x1: x, y1: cy - len / 2, x2: x, y2: cy + len / 2 };
 }
 
-function renderRoom(board, room, { gridW, gridH, model, statusOf, windowLayer }) {
+function renderRoom(board, room, { gridW, gridH, model, statusOf, windowLayer, spots }) {
   const group = svg('g', { class: 'bp-room' });
   const rect = svg('rect', {
     class: `bp-room__rect ${toneFor(room.id ?? room.name)}`,
@@ -544,6 +639,45 @@ function renderRoom(board, room, { gridW, gridH, model, statusOf, windowLayer })
         );
       }
     } else {
+      // kind-specific detailing (inert): TV screen band, shelf planks,
+      // table inner edge — cheap strokes that read at a glance.
+      if (piece.kind === 'tv') {
+        group.appendChild(
+          svg('rect', {
+            class: 'bp-furn__screen',
+            x: piece.absX + 0.25,
+            y: piece.absY + 0.08,
+            width: Math.max(0.4, piece.w - 0.5),
+            height: 0.22,
+            rx: 0.05,
+          }),
+        );
+      } else if (piece.kind === 'shelf' || piece.kind === 'bookshelf') {
+        const planks = piece.kind === 'bookshelf' ? 2 : 1;
+        for (let i = 1; i <= planks; i++) {
+          const y = piece.absY + (piece.h * i) / (planks + 1);
+          group.appendChild(
+            svg('line', {
+              class: 'bp-furn__plank',
+              x1: piece.absX + 0.12,
+              y1: y,
+              x2: piece.absX + piece.w - 0.12,
+              y2: y,
+            }),
+          );
+        }
+      } else if (piece.kind === 'table') {
+        group.appendChild(
+          svg('rect', {
+            class: 'bp-furn__inner',
+            x: piece.absX + 0.18,
+            y: piece.absY + 0.18,
+            width: Math.max(0.3, piece.w - 0.36),
+            height: Math.max(0.3, piece.h - 0.36),
+            rx: 0.1,
+          }),
+        );
+      }
       const plantsOn = model.onFurniture.get(piece.id) ?? [];
       const seats = Math.max(1, Math.floor(piece.w / 1.1));
       plantsOn.slice(0, seats).forEach((plant, index) => {
@@ -563,20 +697,36 @@ function renderRoom(board, room, { gridW, gridH, model, statusOf, windowLayer })
     }
   }
 
-  /* floor plants as potted glyphs */
+  /* floor plants as potted glyphs: hand-placed spots first, the rest on
+     the auto grid. In the editor every floor glyph is draggable. */
+  const spotted = [];
+  const autoPlants = [];
+  for (const plant of floorPlants) {
+    const s = spots?.[plant.id];
+    if (Array.isArray(s) && Number.isFinite(Number(s[0])) && Number.isFinite(Number(s[1]))) {
+      spotted.push([plant, Number(s[0]), Number(s[1])]);
+    } else {
+      autoPlants.push(plant);
+    }
+  }
+  for (const [plant, sx, sy] of spotted) {
+    const cx = room.x + clamp(sx, 0.6, Math.max(0.6, room.w - 0.6));
+    const cy = room.y + clamp(sy, 1.1, Math.max(1.1, room.h - 0.5));
+    group.appendChild(renderPlantGlyph(plant, statusOf(plant), cx, cy, board, room));
+  }
   const pad = 0.85;
   const step = 1.9;
   const cols = Math.max(1, Math.floor((room.w - pad * 2) / step));
   const maxRows = Math.max(1, Math.floor((room.h - 1.7 - pad) / step));
   const capacity = cols * maxRows;
-  floorPlants.slice(0, capacity).forEach((plant, index) => {
+  autoPlants.slice(0, capacity).forEach((plant, index) => {
     const col = index % cols;
     const rowIndex = Math.floor(index / cols);
     const cx = room.x + pad + 0.5 + col * step;
     const cy = Math.min(room.y + 1.9 + 0.6 + rowIndex * step, room.y + room.h - 0.8);
-    group.appendChild(renderPlantGlyph(plant, statusOf(plant), cx, cy));
+    group.appendChild(renderPlantGlyph(plant, statusOf(plant), cx, cy, board, room));
   });
-  if (floorPlants.length > capacity) {
+  if (autoPlants.length > capacity) {
     group.appendChild(
       svg(
         'text',
@@ -586,7 +736,7 @@ function renderRoom(board, room, { gridW, gridH, model, statusOf, windowLayer })
           y: room.y + room.h - 0.4,
           'text-anchor': 'end',
         },
-        `+${floorPlants.length - capacity}`,
+        `+${autoPlants.length - capacity}`,
       ),
     );
   }
@@ -643,7 +793,7 @@ function renderRoom(board, room, { gridW, gridH, model, statusOf, windowLayer })
 
 /* ---------------- plant glyphs + info card ---------------- */
 
-function renderPlantGlyph(plant, status, cx, cy) {
+function renderPlantGlyph(plant, status, cx, cy, board = null, room = null) {
   const state = status?.state ?? 'unknown';
   const label = `${plant.name} — ${state === 'unknown' ? 'no log yet' : state}`;
 
@@ -662,7 +812,28 @@ function renderPlantGlyph(plant, status, cx, cy) {
     svg('title', {}, label),
   ];
 
-  if (editor) return svg('g', { class: 'bp-plant' }, ...parts);
+  if (editor) {
+    const glyph = svg('g', { class: 'bp-plant bp-plant--draggable' }, ...parts);
+    // Drag a floor plant to its exact spot (room-relative, half-unit snap).
+    if (board && room) {
+      const start = { cx, cy };
+      attachDrag(board, glyph, (dx, dy) => {
+        const nx = clamp(
+          Math.round((start.cx + dx) * 2) / 2,
+          room.x + 0.6,
+          Math.max(room.x + 0.6, room.x + room.w - 0.6),
+        );
+        const ny = clamp(
+          Math.round((start.cy + dy) * 2) / 2,
+          room.y + 1.1,
+          Math.max(room.y + 1.1, room.y + room.h - 0.5),
+        );
+        (editor.draft.spots ??= {})[plant.id] = [nx - room.x, ny - room.y];
+        glyph.setAttribute('transform', `translate(${nx - start.cx} ${ny - start.cy})`);
+      });
+    }
+    return glyph;
+  }
 
   const link = svg(
     'a',
@@ -945,6 +1116,17 @@ function renderEditorControls(root, { gridW, gridH, byRoom, draw }) {
                   const pieceRoom = roomsById.get(piece.roomId);
                   return pieceRoom && plantRooms.get(plantId) === roomKey(pieceRoom.name);
                 }),
+              );
+              // spots: keep only well-formed positions of plants that still
+              // exist (room-relative, so a room move needs no rewrite).
+              draft.spots = Object.fromEntries(
+                Object.entries(draft.spots ?? {}).filter(
+                  ([plantId, s]) =>
+                    plantRooms.has(plantId) &&
+                    Array.isArray(s) &&
+                    Number.isFinite(Number(s[0])) &&
+                    Number.isFinite(Number(s[1])),
+                ),
               );
               store.setHouse(draft);
               editor = null;
