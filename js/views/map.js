@@ -13,7 +13,26 @@ import { isGardener } from '../settings.js';
 import { el, icon, clear, snackbar, fmtRelativeDay } from '../ui.js';
 import { wateringStatus } from '../../shared/schedule.js';
 import { plantPhoto, stateChip } from '../components/plant-row.js';
-import { render3D, dollhouseRooms } from './map3d.js';
+
+// The dollhouse (~400 lines of pure presentation) loads on first switch to
+// the 3D view instead of riding every visitor's critical path. It stays in
+// the SW SHELL, so the dynamic import is served from the versioned cache and
+// still works offline.
+let map3d = null; // loaded module, or null until first use
+let map3dLoading = null; // in-flight import promise
+
+function loadMap3d() {
+  map3dLoading ??= import('./map3d.js')
+    .then((mod) => {
+      map3d = mod;
+      return mod;
+    })
+    .catch((err) => {
+      map3dLoading = null; // allow a retry on the next toggle
+      throw err;
+    });
+  return map3dLoading;
+}
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -283,17 +302,33 @@ function drawContent(root, draw) {
   tipContainer = boardCard;
 
   if (viewMode === '3d' && !editor) {
-    render3D(boardCard, {
-      gridW,
-      gridH,
-      rooms: dollhouseRooms(rooms, byRoom, toneFor),
-      model,
-      statusOf,
-      plantSprite: (plant, status) => makeSprite(plant, status),
-      onYaw: (yaw) => {
-        if (compassNeedle) compassNeedle.style.transform = `rotate(${yaw}deg)`;
-      },
-    });
+    if (map3d) {
+      map3d.render3D(boardCard, {
+        gridW,
+        gridH,
+        rooms: map3d.dollhouseRooms(rooms, byRoom, toneFor),
+        model,
+        statusOf,
+        plantSprite: (plant, status) => makeSprite(plant, status),
+        onYaw: (yaw) => {
+          if (compassNeedle) compassNeedle.style.transform = `rotate(${yaw}deg)`;
+        },
+      });
+    } else {
+      boardCard.appendChild(
+        el('div', { class: 'boot-message' }, el('p', {}, 'Building the dollhouse…')),
+      );
+      loadMap3d().then(
+        () => {
+          // Only repaint if the user is still looking at the 3D map.
+          if (viewMode === '3d' && !editor && document.contains(boardCard)) currentDraw?.();
+        },
+        () => {
+          snackbar({ message: 'Could not load the 3D view — showing the plan instead.' });
+          setMode('plan');
+        },
+      );
+    }
   } else {
     boardCard.appendChild(renderBlueprint({ gridW, gridH, rooms, model, statusOf }));
   }

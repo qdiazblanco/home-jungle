@@ -16,7 +16,7 @@ import { join, dirname } from 'node:path';
 
 // Modules loaded on demand via dynamic import(): precached in SHELL so they
 // work offline, but deliberately NOT modulepreloaded (off the critical path).
-const LAZY = [];
+const LAZY = ['js/views/map3d.js'];
 
 // Modules that exist for the Actions runner only — the browser never imports
 // them, so precaching/preloading them would waste every phone's cache.
