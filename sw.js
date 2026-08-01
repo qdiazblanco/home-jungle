@@ -30,7 +30,7 @@ const SHELL = [
   './js/views/plant.js',
   './js/views/plant-form.js',
   './js/views/settings-view.js',
-  './js/views/wishlist.js',
+  './js/views/encyclopedia.js',
   './js/views/calendar.js',
   './js/views/map.js',
   './js/views/map3d.js',

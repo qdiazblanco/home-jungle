@@ -53,8 +53,10 @@ diary.
   child in one step) and see the family tree.
 - **House map** — the collection room by room, with window orientations
   and live watering urgency.
-- **Wishlist** — a dedicated view for plants not yet acquired, with a
-  celebratory "got it" flow when one comes home.
+- **Encyclopedia** — every plant record in one place, badged "I got it"
+  or "I want it": the wishlist lives here (with its celebratory "got it"
+  flow when a plant comes home) alongside past plants — gifted and
+  remembered ones included.
 
 Built with vanilla HTML/CSS/JS (native ES modules, zero dependencies,
 no build step). The scheduling and warning logic is a pure, fully

@@ -21,7 +21,8 @@ const ROUTES = [
   },
   { name: 'add', pattern: /^add$/, gardenerOnly: true, fallback: () => '#/' },
   { name: 'settings', pattern: /^settings$/ },
-  { name: 'wishlist', pattern: /^wishlist$/ },
+  // 'wishlist' is the pre-encyclopedia name — old bookmarks must keep working.
+  { name: 'encyclopedia', pattern: /^(?:encyclopedia|wishlist)$/ },
   { name: 'calendar', pattern: /^calendar$/ },
   { name: 'map', pattern: /^map$/ },
 ];

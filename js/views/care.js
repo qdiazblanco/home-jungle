@@ -130,24 +130,18 @@ function drawContent(root, draw) {
     renderCards(root, active, canEdit);
   }
 
+  // Past & wished-for plants moved to their own page — the Care view stays
+  // a chore list for active plants only.
   if (rest.length) {
     root.appendChild(
-      el('div', { class: 'section-title' }, el('h2', {}, 'Encyclopedia'),
-        el('span', { class: 'muted small' }, 'past & future plants')),
+      el(
+        'p',
+        { class: 'small muted' },
+        `${rest.length} more ${rest.length === 1 ? 'record lives' : 'records live'} in the `,
+        el('a', { href: '#/encyclopedia' }, 'Encyclopedia'),
+        ' — past plants and the wishlist.',
+      ),
     );
-    for (const plant of rest) {
-      root.appendChild(
-        plantCard(plant, {
-          meta: [plant.species, plant.location?.room].filter(Boolean),
-          canEdit: false,
-          actions: [],
-          status: null,
-        }),
-      );
-      root.lastChild.querySelector('.plant-card__meta')?.prepend(
-        el('span', { class: `status-badge status-badge--${plant.status}` }, plant.status),
-      );
-    }
   }
   void draw;
 }

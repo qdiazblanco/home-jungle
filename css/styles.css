@@ -1225,7 +1225,27 @@ code {
   white-space: nowrap;
 }
 
-/* ---------- Phase 2: wishlist ---------- */
+/* ---------- Encyclopedia (formerly wishlist) ---------- */
+
+/* got/want badges: color + icon + text, never color alone */
+.enc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px var(--sp-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.enc-badge svg {
+  width: 0.8rem;
+  height: 0.8rem;
+  flex: none;
+}
+
+.enc-badge--got { color: var(--state-fine); background: var(--state-fine-bg); }
+.enc-badge--want { color: var(--info); background: var(--info-bg); }
 
 .wish-card__head {
   display: flex;
