@@ -13,13 +13,18 @@ import { todayString } from '../../shared/dates.js';
 import { plantPhoto } from '../components/plant-row.js';
 import { navigate } from '../router.js';
 
-/* search + badge filter (module state, reset on route change) */
-let encFilters = { q: '', which: 'all' }; // which: 'all' | 'got' | 'want'
+/* search + badge + care filters (module state, reset on route change) */
+const EMPTY_ENC_FILTERS = { q: '', which: 'all', room: '', sun: '', pets: '' };
+let encFilters = { ...EMPTY_ENC_FILTERS }; // which: 'all' | 'got' | 'want'
 
 if (typeof window !== 'undefined') {
   window.addEventListener('hashchange', () => {
-    encFilters = { q: '', which: 'all' };
+    encFilters = { ...EMPTY_ENC_FILTERS };
   });
+}
+
+function encFiltersActive() {
+  return Boolean(encFilters.q || encFilters.room || encFilters.sun || encFilters.pets);
 }
 
 export function render(container) {
@@ -63,6 +68,22 @@ export function render(container) {
     }
   };
   drawWhich();
+  const rooms = [
+    ...new Set(store.getSnapshot().plants.map((p) => p.location?.room).filter(Boolean)),
+  ].sort();
+  const select = (label, get, set, options) =>
+    el(
+      'select',
+      {
+        'aria-label': `Filter by ${label.toLowerCase()}`,
+        onchange: (e) => {
+          set(e.target.value);
+          draw();
+        },
+      },
+      el('option', { value: '', selected: get() === '' }, label),
+      options.map(([value, text]) => el('option', { value, selected: get() === value }, text)),
+    );
   root.appendChild(
     el(
       'div',
@@ -78,6 +99,16 @@ export function render(container) {
         },
       }),
       whichSeg,
+      select('Room', () => encFilters.room, (v) => (encFilters.room = v), rooms.map((r) => [r, r])),
+      select('Sun', () => encFilters.sun, (v) => (encFilters.sun = v), [
+        ['low', 'low sun'],
+        ['medium', 'medium sun'],
+        ['high', 'high sun'],
+      ]),
+      select('Pets', () => encFilters.pets, (v) => (encFilters.pets = v), [
+        ['safe', 'pet-safe'],
+        ['toxic', 'toxic to pets'],
+      ]),
     ),
   );
   root.appendChild(listRoot);
@@ -85,9 +116,18 @@ export function render(container) {
 }
 
 function matchesSearch(plant) {
-  if (!encFilters.q) return true;
-  const hay = `${plant.name} ${plant.species ?? ''} ${plant.nickname ?? ''} ${plant.general_notes ?? ''}`.toLowerCase();
-  return hay.includes(encFilters.q.toLowerCase());
+  if (encFilters.q) {
+    const hay = `${plant.name} ${plant.species ?? ''} ${plant.nickname ?? ''} ${plant.general_notes ?? ''}`.toLowerCase();
+    if (!hay.includes(encFilters.q.toLowerCase())) return false;
+  }
+  if (encFilters.room && (plant.location?.room ?? '') !== encFilters.room) return false;
+  if (encFilters.sun || encFilters.pets) {
+    const care = effectiveCare(plant);
+    if (encFilters.sun && care.values.sun_need !== encFilters.sun) return false;
+    if (encFilters.pets === 'safe' && care.values.toxic_to_pets) return false;
+    if (encFilters.pets === 'toxic' && !care.values.toxic_to_pets) return false;
+  }
+  return true;
 }
 
 function badge(kind) {
@@ -172,7 +212,7 @@ function drawContent(root, draw) {
       : encFilters.which === 'got'
         ? !got.length
         : !wishes.length && !got.length;
-  if (encFilters.q && visibleEmpty) {
+  if (encFiltersActive() && visibleEmpty) {
     const hiddenCount = encFilters.which === 'want' ? got.length : wishes.length;
     const hiddenLabel = encFilters.which === 'want' ? 'I got it' : 'I want it';
     root.appendChild(
@@ -180,7 +220,7 @@ function drawContent(root, draw) {
         'div',
         { class: 'empty-state', style: 'padding: 1rem' },
         icon('leaf'),
-        el('p', {}, 'Nothing here matches that search.'),
+        el('p', {}, 'Nothing here matches those filters.'),
         encFilters.which !== 'all' && hiddenCount
           ? el(
               'p',
@@ -223,8 +263,8 @@ function drawContent(root, draw) {
         el(
           'p',
           { class: 'small muted' },
-          encFilters.q
-            ? 'No wishes match that search.'
+          encFiltersActive()
+            ? 'No wishes match those filters.'
             : 'No wishes right now — the jungle is complete. For now.',
         ),
       );
@@ -259,7 +299,7 @@ function drawContent(root, draw) {
         el(
           'p',
           { class: 'small muted' },
-          encFilters.q ? 'Nothing you own matches that search.' : 'No records yet.',
+          encFiltersActive() ? 'Nothing you own matches those filters.' : 'No records yet.',
         ),
       );
     }
