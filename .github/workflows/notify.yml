@@ -20,10 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
 
@@ -31,7 +31,7 @@ jobs:
       # they fire once, not thirty times. Eviction is harmless: worst case
       # a single repeated notice.
       - name: Restore notification state
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: .notify-state.json
           key: notify-state-${{ github.run_id }}
@@ -49,9 +49,12 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: node scripts/notify.js
 
+      # hashFiles guard: before the Telegram secrets exist (or after an
+      # early crash) the script writes no state file — saving nothing would
+      # fail the step with a warning.
       - name: Save notification state
-        if: always()
-        uses: actions/cache/save@v4
+        if: ${{ always() && hashFiles('.notify-state.json') != '' }}
+        uses: actions/cache/save@v5
         with:
           path: .notify-state.json
           key: notify-state-${{ github.run_id }}
