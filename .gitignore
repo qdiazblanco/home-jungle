@@ -12,3 +12,5 @@ Thumbs.db
 node_modules/
 
 token.txt
+
+bot-token.txt
