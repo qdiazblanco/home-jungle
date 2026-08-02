@@ -59,6 +59,24 @@ async function main() {
     return;
   }
 
+  // Two crons bracket the DST change so the digest always lands at 08:00
+  // Madrid; the one arriving at the wrong local hour bows out here.
+  if (process.env.NOTIFY_DST_GUARD === 'true' && new Date().getHours() !== 8) {
+    console.log('Not 08:00 in Madrid — the sibling cron covers today.');
+    return;
+  }
+
+  // Manual test from the workflow_dispatch "ping" input: prove the bot
+  // wiring end-to-end even when nothing is due. Leaves the dedup state
+  // untouched.
+  if (process.env.NOTIFY_PING === 'true') {
+    await sendTelegram(
+      "<b>Kipe's Home Jungle 🌿</b>\n\nTest ping — the bot wiring works. Daily digests arrive at 08:00.",
+    );
+    console.log('Ping sent.');
+    return;
+  }
+
   const plants = JSON.parse(await readFile('data/plants.json', 'utf8'));
   const events = JSON.parse(await readFile('data/events.json', 'utf8'));
 

@@ -2,13 +2,27 @@ name: Daily care notifications
 
 on:
   schedule:
-    # 06:00 UTC ≈ 08:00 Madrid in summer (07:00 in winter). Scheduled runs
-    # only fire on the default branch.
+    # Two crons so the digest lands at 08:00 Madrid YEAR-ROUND: 06:00 UTC is
+    # 08:00 in summer (CEST), 07:00 UTC in winter (CET). The script skips the
+    # sibling run that lands at the wrong local hour (NOTIFY_DST_GUARD).
+    # Scheduled runs only fire on the default branch.
     - cron: '0 6 * * *'
-  workflow_dispatch: {}
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      ping:
+        description: Send a test message even when nothing is due
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+
+# A manual test must never interleave with the scheduled run — they share
+# the dedup state. Queue instead of cancelling.
+concurrency:
+  group: notify
+  cancel-in-progress: false
 
 env:
   # Same-day semantics as the phones — shared/dates.js derives the calendar
@@ -18,14 +32,12 @@ env:
 jobs:
   notify:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
+      # The runner's preinstalled Node runs the dependency-free script
+      # directly — no setup-node action needed.
       - name: Checkout
         uses: actions/checkout@v5
-
-      - name: Setup Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: 22
 
       # Dedup state for month-long info notices ("October is coming") so
       # they fire once, not thirty times. Eviction is harmless: worst case
@@ -47,6 +59,8 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NOTIFY_DST_GUARD: ${{ github.event_name == 'schedule' }}
+          NOTIFY_PING: ${{ inputs.ping == true }}
         run: node scripts/notify.js
 
       # hashFiles guard: before the Telegram secrets exist (or after an
