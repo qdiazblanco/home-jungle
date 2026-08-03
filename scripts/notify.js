@@ -59,11 +59,22 @@ async function main() {
     return;
   }
 
-  // Two crons bracket the DST change so the digest always lands at 08:00
-  // Madrid; the one arriving at the wrong local hour bows out here.
-  if (process.env.NOTIFY_DST_GUARD === 'true' && new Date().getHours() !== 8) {
-    console.log('Not 08:00 in Madrid — the sibling cron covers today.');
-    return;
+  // Two crons bracket the DST change so the digest lands at ~08:00 Madrid
+  // year-round. Schedule-run rules, lateness-tolerant on purpose (GitHub
+  // fires crons best-effort — sometimes hours late, sometimes dropping one
+  // entirely — so an exact-hour match would silently lose those days):
+  // - before 08:00 local: this is the off-season cron; the sibling covers it;
+  // - state already stamped with today: a sibling run has handled today.
+  const state = await readState();
+  if (process.env.NOTIFY_DST_GUARD === 'true') {
+    if (new Date().getHours() < 8) {
+      console.log('Before 08:00 in Madrid — the sibling cron covers today.');
+      return;
+    }
+    if (state.date === todayString()) {
+      console.log('Today was already handled by the sibling run.');
+      return;
+    }
   }
 
   // Manual test from the workflow_dispatch "ping" input: prove the bot
@@ -99,7 +110,6 @@ async function main() {
   }
 
   const warnings = getWarnings({ plants, events, today });
-  const state = await readState();
   const digest = buildDigest({
     warnings,
     plantsById: new Map(plants.map((p) => [p.id, p])),

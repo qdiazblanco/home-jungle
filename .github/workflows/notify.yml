@@ -2,10 +2,11 @@ name: Daily care notifications
 
 on:
   schedule:
-    # Two crons so the digest lands at 08:00 Madrid YEAR-ROUND: 06:00 UTC is
-    # 08:00 in summer (CEST), 07:00 UTC in winter (CET). The script skips the
-    # sibling run that lands at the wrong local hour (NOTIFY_DST_GUARD).
-    # Scheduled runs only fire on the default branch.
+    # Two crons so the digest lands at ~08:00 Madrid YEAR-ROUND: 06:00 UTC is
+    # 08:00 in summer (CEST), 07:00 UTC in winter (CET). The script skips a
+    # run before 08:00 local and dedups by the state file's date, so a cron
+    # that GitHub fires hours late (or drops) still gets the digest out
+    # (NOTIFY_DST_GUARD). Scheduled runs only fire on the default branch.
     - cron: '0 6 * * *'
     - cron: '0 7 * * *'
   workflow_dispatch:
